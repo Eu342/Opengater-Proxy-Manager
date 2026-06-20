@@ -1,0 +1,11 @@
+{
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      { "type": "field", "inboundTag": ["proxy-relay-ss"], "outboundTag": "vless-reality" },
+      { "type": "field", "inboundTag": ["redirect"], "domain": ["chatgpt.com", "claude.ai"], "outboundTag": "vless-reality" },
+      { "type": "field", "inboundTag": ["redirect"], "ip": ["1.2.3.0/24"], "outboundTag": "vless-reality" },
+      { "type": "field", "inboundTag": ["redirect"], "outboundTag": "direct" }
+    ]
+  }
+}

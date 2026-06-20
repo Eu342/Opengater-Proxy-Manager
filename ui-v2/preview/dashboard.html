@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opengater Proxy Manager</title>
+<style>
+  :root{
+    --bg:#f5f5f7; --card:#fff; --text:#1d1d1f; --muted:#6e6e73; --faint:#a1a1a6;
+    --line:rgba(0,0,0,.07); --blue:#0a84ff; --green:#30c14e; --amber:#ff9f0a; --red:#ff3b30; --teal:#2bb3a3;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.05);
+    --r:18px;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+  .wrap{max-width:860px;margin:0 auto;padding:22px 22px 60px}
+  h2{font-size:13px;font-weight:600;color:var(--muted);margin:24px 4px 11px}
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow)}
+  .pad{padding:18px 20px}
+  .grow{flex:1}
+
+  .bar{display:flex;align-items:center;gap:11px;padding:4px 2px 18px}
+  .mark{width:32px;height:32px;flex:none;border-radius:8px;object-fit:cover}
+  .wordmark{font-weight:600;font-size:18px;letter-spacing:-.02em}
+  .node{font-size:13px;color:var(--muted)}
+
+  /* power control */
+  .power{display:flex;align-items:center;gap:15px;padding:15px 18px}
+  .pbtn{width:50px;height:50px;border-radius:50%;border:0;cursor:pointer;flex:none;
+    display:flex;align-items:center;justify-content:center;transition:.18s}
+  .pbtn svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round}
+  .pbtn.on{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(10,132,255,.42)}
+  .pbtn.off{background:rgba(120,120,128,.16);color:var(--muted);box-shadow:none}
+  .pstate{font-size:17px;font-weight:600;letter-spacing:-.02em}
+  .ptimer{font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:1px}
+  .pexit{text-align:right;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .pexit b{display:block;color:var(--text);font-weight:600;font-size:15px}
+
+  .iconbtn{width:36px;height:36px;border-radius:10px;border:0;background:rgba(118,118,128,.12);
+    color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+  .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .iconbtn:hover{background:rgba(118,118,128,.2)}
+
+  /* subscription card */
+  .head{display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer}
+  .sub-ic{width:38px;height:38px;border-radius:10px;background:rgba(10,132,255,.1);color:var(--blue);
+    display:flex;align-items:center;justify-content:center;flex:none}
+  .sub-ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .title{font-weight:500;font-size:15px;letter-spacing:-.01em}
+  .hsub{font-size:12.5px;color:var(--faint);margin-top:1px}
+  .chev{color:var(--faint);font-size:20px;transition:transform .2s;flex:none;margin-left:2px}
+  .conn.open .chev{transform:rotate(180deg)}
+
+  .selected{display:flex;align-items:center;gap:11px;padding:13px 18px;border-top:1px solid var(--line)}
+  .conn.open .selected{display:none}
+  .flag{font-size:24px;line-height:1;flex:none}
+  .sel-name{font-weight:600;font-size:15px}
+  .type{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
+  .type.reality{color:#1c6fb8;background:rgba(10,132,255,.12)}
+  .type.xhttp{color:#127d72;background:rgba(43,179,163,.16)}
+  .ping{font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;min-width:46px;text-align:right;color:var(--faint)}
+  .ping.g,.ping.a,.ping.r{color:var(--faint)}
+
+  .loc-list{max-height:0;overflow:hidden;transition:max-height .25s ease}
+  .conn.open .loc-list{max-height:420px}
+  .loc{display:flex;align-items:center;gap:12px;margin:0 12px;padding:12px 8px;border-top:1px solid var(--line);cursor:pointer;border-radius:12px}
+  .loc:first-child{border-top:0;margin-top:4px}
+  .loc:last-child{margin-bottom:8px}
+  .loc:hover{background:#f7f8fa}
+  .loc.on{background:#f1f7ff}
+  .loc .nm{font-weight:500;font-size:15px}
+  .loc .check{width:20px;color:var(--blue);font-size:17px;text-align:center;flex:none;visibility:hidden}
+  .loc.on .check{visibility:visible}
+
+  .strip{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:13px 18px;font-size:13px}
+  .s{display:inline-flex;align-items:center;gap:7px;color:var(--text)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+  .strip .m{color:var(--faint);font-variant-numeric:tabular-nums;margin-left:auto}
+
+  .rows{display:grid;gap:10px}
+  .lrow{display:flex;align-items:center;gap:14px;cursor:pointer}
+  .lrow .ic{width:34px;height:34px;border-radius:9px;background:rgba(10,132,255,.1);color:var(--blue);
+    display:flex;align-items:center;justify-content:center;flex:none}
+  .lrow .ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .lrow .t{font-weight:500;font-size:15px}
+  .lrow .d{font-size:13px;color:var(--faint);margin-top:1px}
+  .lrow .chev2{color:var(--faint);font-size:19px;margin-left:auto}
+
+  .foot{margin-top:24px;display:flex;flex-wrap:wrap;gap:7px 18px;font-size:12px;color:var(--faint);padding:0 4px}
+  .foot b{color:var(--muted);font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <img class="mark" src="logo.png" alt="Opengater" onerror="this.remove()">
+    <span class="wordmark">Opengater Proxy Manager</span>
+    <span class="node">· netcraze‑giga</span>
+  </div>
+
+  <div class="card power" id="power">
+    <button class="pbtn on" id="pwr" title="Connect / disconnect">
+      <svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 7.4a8 8 0 1 0 11.2 0"/></svg>
+    </button>
+    <div>
+      <div class="pstate" id="pstate">Connected</div>
+      <div class="ptimer" id="up">0:00:00</div>
+    </div>
+    <span class="grow"></span>
+    <div class="pexit"><b id="curLoc">🇳🇱 Netherlands · 2</b>188.114.x.x</div>
+  </div>
+
+  <div class="card strip" style="margin-top:13px">
+    <span class="s"><span class="dot"></span> xray</span>
+    <span class="s"><span class="dot"></span> sing‑box</span>
+    <span class="s"><span class="dot"></span> self‑heal</span>
+    <span class="m">fd 412 / 1024 · conntrack 19% · mem 96 MB</span>
+  </div>
+
+  <h2>Subscription</h2>
+  <div class="card conn open" id="conn">
+    <div class="head" id="head">
+      <span class="sub-ic"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg></span>
+      <div><div class="title">My Opengater subscription</div><div class="hsub">4 locations · updated 2h ago</div></div>
+      <span class="grow"></span>
+      <button class="iconbtn" title="Refresh" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></button>
+      <button class="iconbtn" title="Edit subscription" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>
+      <span class="chev">⌄</span>
+    </div>
+
+    <div class="loc-list">
+      <div class="loc on" data-flag="🇳🇱" data-name="Netherlands · 2" data-type="reality" data-ping="24 ms" data-pc="g">
+        <span class="flag">🇳🇱</span><div><div class="nm">Netherlands · 2</div></div>
+        <span class="type reality">reality</span><span class="grow"></span><span class="ping g">24 ms</span><span class="check">✓</span>
+      </div>
+      <div class="loc" data-flag="🇩🇪" data-name="Germany · 1" data-type="reality" data-ping="31 ms" data-pc="g">
+        <span class="flag">🇩🇪</span><div><div class="nm">Germany · 1</div></div>
+        <span class="type reality">reality</span><span class="grow"></span><span class="ping g">31 ms</span><span class="check">✓</span>
+      </div>
+      <div class="loc" data-flag="🇫🇮" data-name="Finland · 1" data-type="xhttp" data-ping="28 ms" data-pc="g">
+        <span class="flag">🇫🇮</span><div><div class="nm">Finland · 1</div></div>
+        <span class="type xhttp">xhttp</span><span class="grow"></span><span class="ping g">28 ms</span><span class="check">✓</span>
+      </div>
+      <div class="loc" data-flag="🇺🇸" data-name="United States · 3" data-type="reality" data-ping="96 ms" data-pc="r">
+        <span class="flag">🇺🇸</span><div><div class="nm">United States · 3</div></div>
+        <span class="type reality">reality</span><span class="grow"></span><span class="ping r">96 ms</span><span class="check">✓</span>
+      </div>
+    </div>
+  </div>
+
+  <h2>Manage</h2>
+  <div class="rows">
+    <div class="card pad lrow">
+      <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>
+      <div><div class="t">Routing</div><div class="d">5 groups · 4 active · who goes through VPN</div></div>
+      <span class="chev2">›</span>
+    </div>
+    <div class="card pad lrow">
+      <span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M9 21h6M12 18v3"/></svg></span>
+      <div><div class="t">Devices</div><div class="d">8 on this network · 5 routed via VPN</div></div>
+      <span class="chev2">›</span>
+    </div>
+    <div class="card pad lrow">
+      <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg></span>
+      <div><div class="t">Logs &amp; diagnostics</div><div class="d">xray · sing‑box · self‑heal · health</div></div>
+      <span class="chev2">›</span>
+    </div>
+    <div class="card pad lrow">
+      <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></span>
+      <div><div class="t">Settings</div><div class="d">Core (xray / mihomo) · IPv6 · FakeIP · policy</div></div>
+      <span class="chev2">›</span>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span><b>policy</b> Opengater Proxy Manager</span><span><b>xray</b> 25.3.6</span>
+    <span><b>sing‑box</b> 1.13.8</span><span><b>kernel</b> 4.9.182</span><span><b>disk</b> 1.2 / 3.7 GB</span>
+  </div>
+</div>
+<script>
+  var conn=document.getElementById('conn');
+  document.getElementById('head').addEventListener('click',function(){conn.classList.toggle('open')});
+  document.querySelectorAll('.loc').forEach(function(el){
+    el.addEventListener('click',function(){
+      document.querySelectorAll('.loc').forEach(function(x){x.classList.remove('on')});
+      el.classList.add('on');
+      document.getElementById('curLoc').textContent=el.dataset.flag+' '+el.dataset.name;
+      conn.classList.remove('open');
+    });
+  });
+  var up=2*3600+41*60+9, on=true, timer=null;
+  function fmt(s){var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+    return h+':'+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');}
+  function tick(){up++;document.getElementById('up').textContent=fmt(up);}
+  document.getElementById('up').textContent=fmt(up); timer=setInterval(tick,1000);
+  document.getElementById('pwr').addEventListener('click',function(){
+    on=!on; var b=this;
+    if(on){b.className='pbtn on';document.getElementById('pstate').textContent='Connected';timer=setInterval(tick,1000);}
+    else{b.className='pbtn off';document.getElementById('pstate').textContent='Off';clearInterval(timer);document.getElementById('up').textContent='—';}
+  });
+</script>
+</body>
+</html>

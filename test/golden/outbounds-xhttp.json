@@ -1,0 +1,16 @@
+{
+  "outbounds": [
+    {
+      "tag": "vless-reality", "protocol": "vless",
+      "settings": { "vnext": [ { "address": "cdn.example.com", "port": 443,
+        "users": [ { "id": "11111111-1111-1111-1111-111111111111", "encryption": "none", "flow": "", "level": 0 } ] } ] },
+      "streamSettings": {
+        "network": "xhttp", "security": "reality",
+        "xhttpSettings": { "host": "example.com", "path": "/stream", "mode": "auto" },
+        "realitySettings": { "publicKey": "PK", "fingerprint": "chrome", "serverName": "example.com", "shortId": "abcd", "spiderX": "/" }
+      },
+      "mux": { "enabled": false }
+    },
+    { "protocol": "freedom", "tag": "direct" }
+  ]
+}

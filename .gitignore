@@ -1,0 +1,21 @@
+.claude/
+snapshots/
+tmp/
+tmp_*.json
+nul
+docs/troubleshooting.md
+*.tar.gz
+archive/*.zip
+configs/xkeen/*.router-live.json
+ui/xkeen-manager/router-live-routing.json
+.ssh-linux.env
+
+# local credentials and secrets — never commit
+.env
+.env.local
+*.env
+!.env.example
+
+# macOS
+.DS_Store
+**/.DS_Store

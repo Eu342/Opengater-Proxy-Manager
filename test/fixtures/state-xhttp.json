@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2, "activeCore": "xray", "activeProfileId": "p1",
+  "settings": { "ipv6Mode": "reject" },
+  "profiles": [ { "id": "p1", "name": "P1", "cores": {
+    "xray": {
+      "proxyConfig": { "transport": "xhttp", "address": "cdn.example.com", "port": "443",
+        "uuid": "11111111-1111-1111-1111-111111111111", "flow": "", "publicKey": "PK",
+        "serverName": "example.com", "shortId": "abcd", "fingerprint": "chrome",
+        "xhttpPath": "/stream", "xhttpMode": "auto" },
+      "muxConfig": { "mode": "off", "tcpConcurrency": 8, "xudpConcurrency": 8, "xudpProxyUDP443": "reject" },
+      "domainStrategy": "IPIfNonMatch", "fallbackOutbound": "direct", "groups": []
+    },
+    "mihomo": { "proxyConfig": { "transport": "reality" }, "rules": [], "proxyGroups": [] }
+  } } ]
+}

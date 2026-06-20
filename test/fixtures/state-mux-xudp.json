@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2, "activeCore": "xray", "activeProfileId": "p1",
+  "settings": { "ipv6Mode": "reject" },
+  "profiles": [ { "id": "p1", "name": "P1", "cores": {
+    "xray": {
+      "proxyConfig": { "transport": "reality", "address": "vpn.example.com", "port": 443,
+        "uuid": "00000000-0000-0000-0000-000000000000", "flow": "xtls-rprx-vision", "publicKey": "PK",
+        "serverName": "sni.example.com", "shortId": "abcd", "fingerprint": "random" },
+      "muxConfig": { "mode": "xudp", "tcpConcurrency": 8, "xudpConcurrency": 8, "xudpProxyUDP443": "reject" },
+      "domainStrategy": "IPIfNonMatch", "fallbackOutbound": "direct", "groups": []
+    },
+    "mihomo": { "proxyConfig": { "transport": "reality" }, "rules": [], "proxyGroups": [] }
+  } } ]
+}

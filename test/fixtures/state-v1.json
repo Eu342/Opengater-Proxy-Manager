@@ -1,0 +1,25 @@
+{
+  "activeProfileId": "profile-1",
+  "profiles": [
+    {
+      "id": "profile-1",
+      "name": "Profile 1",
+      "domainStrategy": "IPIfNonMatch",
+      "fallbackOutbound": "direct",
+      "proxyConfig": {
+        "address": "vpn.example.com", "port": 443,
+        "uuid": "00000000-0000-0000-0000-000000000000",
+        "flow": "xtls-rprx-vision", "publicKey": "PUBKEY",
+        "serverName": "www.cloudflare.com", "shortId": "0123456789abcdef",
+        "fingerprint": "random"
+      },
+      "muxConfig": { "mode": "off", "tcpConcurrency": 8, "xudpConcurrency": 8, "xudpProxyUDP443": "reject" },
+      "groups": [
+        { "id": "g-ai", "name": "AI", "note": "", "enabled": true, "outboundTag": "vless-reality",
+          "domains": ["chatgpt.com", "claude.ai"], "cidrs": ["1.2.3.0/24"] },
+        { "id": "g-bypass", "name": "Bypass", "note": "", "enabled": true, "outboundTag": "bypass",
+          "domains": [], "cidrs": [] }
+      ]
+    }
+  ]
+}

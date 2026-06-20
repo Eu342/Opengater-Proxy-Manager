@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Opengater Proxy Manager</title>
+<style>
+  :root{
+    --bg:#f5f5f7; --card:#fff; --text:#1d1d1f; --muted:#6e6e73; --faint:#a1a1a6;
+    --line:rgba(0,0,0,.07); --blue:#0a84ff; --green:#30c14e; --amber:#ff9f0a; --red:#ff3b30; --teal:#2bb3a3;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.05);
+    --r:18px;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",sans-serif;
+  }
+  :root.dark{
+    --bg:#000; --card:#1c1c1e; --text:#f5f5f7; --muted:#98989f; --faint:#7c7c81;
+    --line:rgba(255,255,255,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.45);
+  }
+  .dark .tabs{background:rgba(118,118,128,.2)}
+  .dark .tabs button.on{background:#3a3a3c;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+  .dark input,.dark textarea,.dark select{background:#2c2c2e}
+  .dark input:focus,.dark textarea:focus{background:#3a3a3c}
+  .dark .loc{border-top-color:rgba(255,255,255,.04)}
+  .dark .loc.on{background:rgba(10,132,255,.18)}
+  .dark pre.log{background:rgba(118,118,128,.16);color:#c7c7cc}
+  .dark .pill.direct{color:#7fb4ff}
+  .dark .toast{background:#2c2c2e}
+  @media (hover:hover){
+    .dark .menu button:hover{background:#2c2c2e}
+    .dark .loc:hover{background:#2a2a2c}
+    .dark .iconbtn:hover{background:rgba(255,255,255,.08)}
+    .dark .back:hover{background:rgba(255,255,255,.08)}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+  .wrap{max-width:860px;margin:0 auto;padding:20px 20px 14px;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+  html,body{overflow-x:hidden}
+  /* page transitions (T1 — iOS push / parallax) */
+  .pglayer{position:fixed;inset:0;background:var(--bg);overflow:hidden;will-change:transform,filter}
+  #app.pgincoming{position:relative;background:var(--bg);min-height:100vh;min-height:100dvh;will-change:transform}
+  @keyframes pgInR{from{transform:translateX(100%)}to{transform:translateX(0)}}
+  @keyframes pgInLpar{from{transform:translateX(-26%);filter:brightness(.82)}to{transform:translateX(0);filter:brightness(1)}}
+  @keyframes pgOutLpar{from{transform:translateX(0);filter:brightness(1)}to{transform:translateX(-26%);filter:brightness(.82)}}
+  @keyframes pgOutR{from{transform:translateX(0)}to{transform:translateX(100%)}}
+  h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 4px 11px}
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow)}
+  .pad{padding:15px 18px}
+  .grow{flex:1} .muted{color:var(--muted)} .faint{color:var(--faint)}
+  a{color:var(--blue);text-decoration:none}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  .bar{display:flex;align-items:baseline;gap:6px;padding:0 0 24px}
+  .mark{width:22px;height:22px;flex:none;object-fit:cover;align-self:center}
+  .wordmark{font-weight:600;font-size:20px;letter-spacing:-1px}
+  .node{font-size:13px;color:var(--muted)}
+  .logout{margin-left:auto;font-size:13px;color:var(--muted);cursor:pointer}
+  .navbar{display:flex;align-items:center;gap:8px;padding:0}
+  .back{width:36px;height:36px;border-radius:10px;border:0;background:transparent;color:var(--text);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+  @media (hover:hover){.back:hover{background:rgba(118,118,128,.12)}}
+  .back svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .navtitle{flex:1;text-align:center;font-size:17px;font-weight:600;letter-spacing:-.01em}
+  .navsp{width:36px;flex:none}
+
+  /* nav tabs */
+  .tabs{display:flex;gap:4px;background:rgba(118,118,128,.1);border-radius:12px;padding:3px;margin:0 2px 6px;overflow:auto}
+  .tabs button{flex:1;border:0;background:transparent;font:inherit;font-size:13px;font-weight:500;color:var(--muted);
+    padding:7px 10px;border-radius:9px;cursor:pointer;white-space:nowrap}
+  .tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+  /* buttons / inputs */
+  .btn{font:inherit;font-size:14px;font-weight:600;color:#fff;background:var(--blue);border:0;border-radius:11px;
+    padding:11px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+  .btn.sec{color:var(--blue);background:rgba(10,132,255,.1)}
+  .btn.ghost{color:var(--muted);background:rgba(118,118,128,.12)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9}
+  .iconbtn{width:36px;height:36px;border-radius:10px;border:0;background:transparent;
+    color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+  .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+  @media (hover:hover){.iconbtn:hover{background:rgba(118,118,128,.12)}}
+  .iconbtn.spinning svg{animation:spin 1.1s cubic-bezier(.6,0,.4,1) infinite}
+  .more{position:relative;margin-left:-12px}
+  .menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:5px;min-width:158px;z-index:20}
+  .menu button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;color:var(--text);padding:9px 11px;border-radius:8px;cursor:pointer;text-align:left}
+  @media (hover:hover){.menu button:hover{background:#f4f5f7}}
+  .menu button.del{color:var(--red)}
+  .menu button svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;flex:none}
+  input,textarea,select{font:inherit;font-size:15px;color:var(--text);background:#f1f1f4;border:1px solid transparent;
+    border-radius:11px;padding:11px 13px;width:100%;outline:none}
+  input:focus,textarea:focus{border-color:var(--blue);background:#fff}
+  .lst select{font-size:12.5px;padding:6px 30px 6px 12px;-webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center}
+  select.fld{width:100%;-webkit-appearance:none;appearance:none;padding-right:36px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center}
+  textarea{resize:vertical;min-height:96px;line-height:1.5}
+  label.fl{font-size:13px;color:var(--muted);display:block;margin:0 2px 6px}
+
+  /* power */
+  .power{display:flex;align-items:center;gap:15px;padding:15px 18px}
+  .pbtn{position:relative;width:38px;height:38px;border-radius:50%;border:2px solid rgba(120,120,128,.45);background:transparent;color:var(--muted);cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;transition:border-color .25s,color .25s,background .25s}
+  .pbtn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;position:relative;z-index:3}
+  .pbtn.on{border-color:var(--blue);color:var(--blue);background:rgba(10,132,255,.08)}
+  .pbtn.off{border-color:rgba(120,120,128,.45);color:var(--muted);background:transparent}
+  .pbtn.pending{border-color:rgba(120,120,128,.4);color:var(--muted)}
+  .pbtn .cmt{position:absolute;inset:-7px;border-radius:50%;opacity:0;background:conic-gradient(from 0deg,transparent 8%,var(--blue));-webkit-mask:radial-gradient(farthest-side,#0000 calc(100% - 2px),#000 0);mask:radial-gradient(farthest-side,#0000 calc(100% - 2px),#000 0)}
+  .pbtn.pending .cmt{opacity:1;animation:spin 1s linear infinite}
+  .pstate{font-size:15px;font-weight:600;letter-spacing:-.02em}
+  .ptimer{font-size:12.5px;color:var(--muted);margin-top:1px}
+  .pexit{text-align:right;font-size:12.5px;color:var(--muted);min-width:0}
+  .pexit b{display:block;color:var(--text);font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pexit .exip{display:block;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* service status (in foot) */
+  .svc{display:inline-flex;align-items:center;gap:5px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+  .dot.off{background:rgba(120,120,128,.5)}
+  .dot.bad{background:var(--red)} .dot.warn{background:var(--amber)} .dot.wait{background:var(--faint)}
+  .ld{display:inline-block;width:11px;height:11px;border:2px solid var(--faint);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite, fadein .25s ease;vertical-align:-1px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  .fade{animation:fadein .35s ease}
+  @keyframes slu{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .lst.devin .it{animation:slu .38s ease both}
+  .lst.devin .it:nth-child(1){animation-delay:.02s}.lst.devin .it:nth-child(2){animation-delay:.07s}.lst.devin .it:nth-child(3){animation-delay:.12s}.lst.devin .it:nth-child(4){animation-delay:.17s}.lst.devin .it:nth-child(5){animation-delay:.22s}.lst.devin .it:nth-child(6){animation-delay:.27s}.lst.devin .it:nth-child(7){animation-delay:.32s}.lst.devin .it:nth-child(8){animation-delay:.37s}
+
+  /* subscription / locations */
+  .head{display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;border-bottom:1px solid transparent}
+  .conn.open .head{border-bottom-color:var(--line)}
+  .sub-ic{width:38px;height:38px;border-radius:10px;background:rgba(10,132,255,.1);color:var(--blue);display:flex;align-items:center;justify-content:center;flex:none}
+  .sub-ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .title{font-weight:500;font-size:15px;letter-spacing:-.01em}
+  .hsub{font-size:12.5px;color:var(--faint);margin-top:1px}
+  .conn{overflow:visible}
+  .chev{color:var(--faint);transition:transform .2s;flex:none;margin-left:2px;display:flex;align-items:center}
+  .chev svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+  .conn.open .chev{transform:rotate(180deg)}
+  .loc-list{display:grid;grid-template-rows:0fr;overflow:hidden;transition:grid-template-rows .32s ease;border-radius:0 0 var(--r) var(--r)}
+  .loc-inner{overflow:hidden;min-height:0}
+  .conn.open .loc-list{grid-template-rows:1fr}
+  .loc{display:flex;align-items:center;gap:9px;padding:12px 18px;border-top:1px solid var(--line);cursor:pointer}
+  .loc:first-child{border-top:0}
+  @media (hover:hover){.loc:hover{background:#f7f8fa}} .loc.on{background:#f1f7ff;border-top-color:transparent}
+  .flag{font-size:24px;line-height:1;flex:none}
+  img.flag{width:20px;height:20px;flex:none;object-fit:contain;vertical-align:middle;display:inline-block}
+  .flagip{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
+  .flagip img.flag{width:14px;height:14px}
+  .loc>div{min-width:0;overflow:hidden}
+  .loc .nm{font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .type{font-size:10.5px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding:2px 7px;border-radius:6px;flex:none;white-space:nowrap}
+  .type.reality{background:rgba(48,193,78,.13);color:#1f9e3e}
+  .type.xhttp{background:rgba(10,132,255,.12);color:var(--blue)}
+  .ping{font-size:12px;font-weight:500;color:var(--faint);text-align:right;font-variant-numeric:tabular-nums;flex:none;white-space:nowrap}
+  .bars{display:inline-flex;align-items:flex-end;gap:2px;height:13px;vertical-align:middle}
+  .bars i{width:3px;border-radius:1px;background:rgba(120,120,128,.22)}
+  .bars i:nth-child(1){height:5px}.bars i:nth-child(2){height:7.5px}.bars i:nth-child(3){height:10px}.bars i:nth-child(4){height:13px}
+  .bars.q4 i.f,.bars.q3 i.f{background:var(--green)}
+  .bars.q2 i.f{background:var(--amber)}
+  .bars.q1 i.f{background:var(--red)}
+  .pingprev{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .pingprevlbl{font-size:13px;color:var(--muted)}
+  .pingprevval{display:inline-flex;align-items:center;gap:14px}
+  .check{width:20px;color:var(--blue);font-size:17px;text-align:center;flex:none;visibility:hidden}
+  .loc.on .check{visibility:visible}
+
+  /* manage rows */
+  .rows{display:grid;gap:10px}
+  .lrow{display:flex;align-items:center;gap:14px;cursor:pointer}
+  .lrow .ic{width:34px;height:34px;border-radius:9px;background:rgba(10,132,255,.1);color:var(--blue);display:flex;align-items:center;justify-content:center;flex:none}
+  .lrow .ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .lrow .t{font-weight:500;font-size:15px} .lrow .d{font-size:12.5px;color:var(--faint);margin-top:1px}
+  .lrow .chev2{color:var(--faint);font-size:19px;margin-left:auto}
+
+  /* generic list rows (settings, routing, devices) */
+  .lst .it{display:flex;align-items:center;gap:12px;padding:14px 18px}
+  .lst .it:not(:last-child){border-bottom:1px solid var(--line)}
+  .lst .k{font-weight:500} .lst .sub{font-size:12.5px;color:var(--faint);margin-top:1px}
+  .pill{font-size:12px;font-weight:600;padding:3px 11px;border-radius:980px}
+  .pill.vpn{color:#fff;background:var(--blue)} .pill.direct{color:#1c6fb8;background:rgba(10,132,255,.12)} .pill.bypass{color:var(--muted);background:rgba(118,118,128,.13)}
+  .switch{width:50px;height:30px;display:inline-block;position:relative;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .sl{position:absolute;inset:0;background:rgba(120,120,128,.3);border-radius:980px;transition:.2s;cursor:pointer}
+  .sl::before{content:"";position:absolute;top:2px;left:2px;width:26px;height:26px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:.2s}
+  .switch input:checked + .sl{background:var(--blue)}
+  .switch input:checked + .sl::before{transform:translateX(20px)}
+  pre.log{background:rgba(118,118,128,.1);color:#474747;border-radius:14px;padding:14px;font:12px/1.5 ui-monospace,Menlo,monospace;overflow:auto;max-height:440px;white-space:pre-wrap;word-break:break-word}
+
+  /* login */
+  .login{max-width:380px;margin:8vh auto 0;text-align:center}
+  .login .mark{width:64px;height:64px;border-radius:16px;margin-bottom:14px}
+  .login h1{font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px}
+  .login p{color:var(--muted);margin:0 0 26px;font-size:14px}
+  .login .card{padding:20px;text-align:left}
+  .login input{margin-bottom:12px;font-size:16px}
+  .err{color:var(--red);font-size:13px;margin-top:10px;text-align:center}
+  .ok{color:var(--green)}
+
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;z-index:50;padding:0}
+  @media(min-width:560px){.ov{align-items:center;padding:20px}}
+  .modal{background:var(--card);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:22px;box-shadow:0 -10px 40px rgba(0,0,0,.2)}
+  @media(min-width:560px){.modal{border-radius:20px}}
+  .modal h3{margin:0 0 14px;font-size:18px;font-weight:600}
+  .modal .row{display:flex;gap:10px;margin-top:16px}
+  .modal .row .btn{flex:1}
+
+  /* bottom sheet (edit subscription) */
+  .sheet-ov{position:fixed;inset:0;z-index:70;visibility:hidden}
+  .sheet-ov.open{visibility:visible}
+  .sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .32s ease}
+  .sheet-ov.open .sheet-bg{opacity:1}
+  .sheet{position:absolute;left:0;right:0;bottom:0;margin:0 auto;width:100%;max-width:520px;background:var(--card);
+    border-radius:22px 22px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+    box-shadow:0 -10px 40px rgba(0,0,0,.22);transform:translateY(110%);transition:transform .36s cubic-bezier(.32,.72,0,1)}
+  .sheet-ov.open .sheet{transform:translateY(0)}
+  .sheet-grab{width:38px;height:5px;border-radius:3px;background:rgba(120,120,128,.3);margin:0 auto 16px}
+  .sheet h3{margin:0 0 18px;font-size:18px;font-weight:600;text-align:center}
+
+  .toast{display:none;position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(80px);opacity:0;pointer-events:none;background:#1d1d1f;color:#fff;
+    padding:11px 18px;border-radius:12px;font-size:14px;font-weight:500;z-index:80;transition:transform .3s,opacity .3s;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .toast.bad{background:#b3271e}
+  .empty{text-align:center;color:var(--faint);padding:38px 20px;font-size:14px}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+<script>try{if(localStorage.getItem('opg.theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+"use strict";
+const API='/api/api.cgi/v1';
+const LOGO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAsCAYAAAAehFoBAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAimVYSWZNTQAqAAAACAAFARoABQAAAAEAAABKARsABQAAAAEAAABSASgAAwAAAAEAAgAAATEAAgAAAAYAAABah2kABAAAAAEAAABgAAAAAAAAAEgAAAABAAAASAAAAAFGaWdtYQAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAALKADAAQAAAABAAAALAAAAAC/v9x8AAAACXBIWXMAAAsTAAALEwEAmpwYAAADAWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNi4wLjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOmV4aWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vZXhpZi8xLjAvIgogICAgICAgICAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyI+CiAgICAgICAgIDx4bXA6Q3JlYXRvclRvb2w+RmlnbWE8L3htcDpDcmVhdG9yVG9vbD4KICAgICAgICAgPGV4aWY6UGl4ZWxYRGltZW5zaW9uPjI1NjwvZXhpZjpQaXhlbFhEaW1lbnNpb24+CiAgICAgICAgIDxleGlmOkNvbG9yU3BhY2U+MTwvZXhpZjpDb2xvclNwYWNlPgogICAgICAgICA8ZXhpZjpQaXhlbFlEaW1lbnNpb24+MjU2PC9leGlmOlBpeGVsWURpbWVuc2lvbj4KICAgICAgICAgPHRpZmY6WFJlc29sdXRpb24+NzI8L3RpZmY6WFJlc29sdXRpb24+CiAgICAgICAgIDx0aWZmOlJlc29sdXRpb25Vbml0PjI8L3RpZmY6UmVzb2x1dGlvblVuaXQ+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjcyPC90aWZmOllSZXNvbHV0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KIpokIQAAC99JREFUWAmFWWuMV0cVPzP3/h/76PIoj4Wyy7KAkGJ8UNvwUBKTFsUP0FYjPj74QERJMEWTqg01aE1KqwYibdOUtH4wVqX4QT/YitEag8ZHrNRSXBRYFLCbhW5Z2GX3/7h3/J153bn/B0z+NzP/mTPn/M6ZM2fO3CuoTdm0TJVKV2lRnFJfElGviqmXRDogIrGUIlpBUsylSHWjjlGTfiSYReYRQZskj3O/YLo66gkRpZfQd4oknRGxPEexGqEoGhFR5cJEZ+n8iwdFpRU0cMiXD/eqVWlK29C7USkagOAuaUFooQCi+OE+DwSAAoCtwYJezyESsSARSTzctv1op4xGJJMUCyhAR5WQz/7sSfE6en3JAb5vjtotBe0VgnpSYAiBMXMnUNdWuLEuxgDY04RjgSJuvqHLK2kUZkXApxCRLEC+UFdJqL2H90f7HWIP+P456gFYZr8GyqNakFnKvMUw5sCzKzhAIeBgrh+3cwwvw7dxzK+Y5SViAC9KSlS6+8jj0QGGpQFvma1uh2Z/wZ8usGoP1lsONNpvDa22mAOugQWKBHMMnQUb9BsDZHNCfgwaikwSJXe98GjpJIvhZdgOtzJgmZH1Kz2R/zc9Vqi1RH48Exz2C7cxm3gxf8OP5YVgeb4S2KPlqEsU5XZQkrDR4BXIvj3VVrKTdRsUrnaC/EbDZIwlzARjssi0mSI5sKCrwddi0ISbzPDOwHpZXibG0JbFAimqn5yYVVgtC+PUB1FLcmAdOK6DXewswWAYZC0l6l+qaO5CpQGFIB0NK5HiWb9OUanLRgLP3yro/0Oeb2djSsAskVrSM02LJFykD8I7HKHeFF5DtppjYrR1QKp1osXLFH3jsRo99EiN5i9g0I7WKMRRhvvu35zSg1+u087PJFQoYVV454RuwDKcHF1bsL4vxcrEHUrV+yUI55k4q4z/eA2dcJ6caastC4UXLVH09W/XaE4vgjWA7/lWnRb2KapiTC87rFqFGzDYT25NSFWJ3rs2pd3b61TuUN6VtKHCVYwzWc44XHO0ULGYJ9OYFrAABtI02fmkHWM6tlgvgDHYhf1YbgDhZ/EgQD9cp/4BAK0rqoBu84dS+tQnoAF+OIQ03Zr3KPrKtoQ64R7oNjK9VVuDdbikrC+IVs7a+zG4wRp9cjEwtwyBVZ2mvOILAPZrcIGB5QYsy+SiIH3GbKLV71L02j8F3QVgn4cL8OozWFeY7raFRMvB59UzkqbgWiK0qpXvDWhxyEJMKSWnYilpUGvggYJ1aFn068moEyDedG+dlqxMqD4JKIyGiwWUTsP681J65CFFHR1Gd8VaNhaAXo7VuXW2orFpQY1HvwfrcEC2QlvIaDBGUoNEBhz50RZuWBbXj7FYKPrpT2KaNadO69ZXqAJhjSVKJM2cAX8Dm1ZgYSCahGLffR6Zz0WiYgmETgZqDza32uCFSKFEuhKZFs1TLJcJ2Px2srOq6TdjHEGuQ9jBJ8o0jTCxbu00VasGtALCIuJlB8IAkqeWhcFO1YgOHI7ob6cFlcrWOE0yMxxOvpKIFJLmxgCIFJEnZpO9lpZRqEgExeoA9Mxz3TRVSWj9mkmqIBEsd5Sos7PcEih3MtgK/PXgkYj+PEQZWGvJTGaGw4HVtcF4C+eyAG2JMJmt6Al1u5kBg2Yj/vBwD01MJXT3hircoJsE0rxWhbun64KeOCLp2AmAhX/7lczJy3AYkKDzCukxJKXOsgyWB/0DgnD32n5Do5D+KZrG8g6dnYnoMAsWbA2WFQAnGrt8hcYn4E8F0OV4OZkNYD0O4ApwALCZ0AQ2mOBoTG0Ywxvo7asQU3cmVC6KXOgCx1wZvzJBqj5N2z8wTmtWwO+Rqd9Unl1dnTQFq6AB33QywJvDxYDl02zF2xQ9uKsOV0A8xv925Tp2ab1eh8+WqburQNvvuU4bVlWpwjs9dDk2UHDisVU9rqCfo4T3p3Bzhf16ovVzBjs4qOirX0oInkApNlK7UqvVYXlF5TISCF0QGcBnx91VKCDoN6ciwuXCu4j36yBa+dW1ysUGDE+yPhSYnxkYLTGGNhty2TKA3ZXQ3DmwLHy4XWGg7NcZ2IyS3X3nxpRq2EK/R3jzoLW81jgc8FyEcBo664ZguQ+5DM2fr2j2jISSChIY/PfFtxUuv5GOGFy3KhJLfP5NouExnHK4uzkwwkWr0GjeA4wixiVaLgsYNTBgS/yBU/3nItqx9ToV4GcJbyCQarywaqlUbBveGDwfwxfHiPa9JOl/1xA0OPFHX+PmyhvPgGW6PGCrmbnOMHfDzNeYUCwqOvZqTFVVps9tuUalIlISJLjsAl1dZSogSWlXGOzIONFjv5J0EWCL7NqQcUOwgT/zijcBbgILohAwa1lGDP7rUJFqeI/y6Q+OUSlOqKu7GwnPjU+60atEjx+V9F/UObCNMrShMqv6wwz9uTjswTKDIJQYH2MGWajhPOD4cIme/uVMknEnzZiBBLdN4ZNuqprSgd8KOg3fLYZuwLJu8HiwFpNkYH5zhROdO+g+o62ma+hffFuJbp3b0wYqeANsgrx0/M0xurN3nLo6sXnBI2ccCyY0DLcNrlAhRB5okNxIQxfu/GRreb5R3HNnSjs2456GzQkXbllShJbx8QkdYTYsqdJn381+j83KO7XJQIEbuLFwpYGVLXwtN9ER6jqwrOuHdRjs+1en9IUtKXJkRIg2YHkj8knHhbM5gdRzXX9CX7xjivCXpQegW4BlmZoGYwwcWLHp1CURRTOVxLEQMoDVvFWDfr5Yvu+dinbem8KyWF5O2xoKuwEbkHNmibyyg9EFZW0fUUe5Rk+dKNBVnJSyIRLkcNgxvOEEUzUKC4shfpuYt3IA1lkWNZ/CqwYVPfCRFJGhNVg+xaZwKR1F2CqDqFwu6tjM8dk9/Ebljv6I7kM+krhYD/7eQF4mLGuNJYo4jAriFK756qy+lgdEzROBFJpySnnxiqBXzlgFA6txk8EiGNCTxwQ9jIPhP1cQhJBOcp4cPhEMNHRZ0M/PgS0UZ3nNMjMXYWMKXk6RnsXraHkus25ry7qNx0fqNdwu9v8Cifjr9li1oNkNcLunpwH22LCg0etEj/6O6MxlXnJLhIrbp9/Cne44cmTkIswzk89tBhqAtePWC85JUVBv6Amhz7IA/wST0Rfh7Oec5yBOq5dPADRbCGDZlQ/9ERnYv5GRwWX5RBydwhEMBf5lQfM1aRgn3Xf+TvQWmBTAK2/ZvCyDy9IAnyxEb8hEqVG8ONb5bgbSAc4z4CDOAiK4RoI5T70s6NcAza+kfvAnQS+dMmBdjOU8YQz+vA8vcodwYFycwEkHsJcYrD08Mpl5WdwfukqqaohG6ajYukstTVTtNYpkB+Fm6rTyywIwejLXvDz6P5ij5gOABa9cQPSPEWN9DVbTOFq4ClZgVicSI9CO8C2JMzRHwyup2xZw0K+tzysP/4VRpxJZf4fEsX4BH0mGJTs1T9ZPs7ZNioCO3YEjx3ENlv3fKJLxMfxirMg4ouYo/F+D9XJ4nGXl5XnL2giiI0REwxOq57zkrzXISY9K3MuaJltttaZtFOEIUwSgjMYpna95s3FEyCuTB9puTHZgaWJx9MXlwAoW7BuHEpVM6tfzgfZe0xZWyJjfTKhRJqeQNkTzvLw8oxxbN6lOT+JUPsRYNeAXvlc6qeJ0jywhOPM3BfwyAc2MHVh2gYzOCHBjjcuc9YMuuLa7fsOHZWXyGKzEwQOL7vnR4ltOMmD4QVY++s1kN+LdXrhHT4o7BF7T43scNiKrpa2CmlcAbRcJ3H8n2NAZobnU0M+3gPx/8NJtOwdHsAOaJrWruNLsfb6/3PzZy8H++D61KpHpNhUlGxFfB5AwdCH+eaAcAgkfSvhdV+MVyoC3gHiVAlChIpwx6Q+LbEHe7PiPUwwZHScW+GIU0TnkN0dVop798eJS+w+LDjTXm76vSt1RpS+SpUV4Rd2Lc7c3FekAIsNSfLNYgU+4DZ9uMcntal4FuxKZ5VkR3thYtkhNCCn0p1ts2jMaYEwjMiqMRJ3xedxMLvAGYxyN5f9JbM0371rfrQAAAABJRU5ErkJggg==';   // inlined 44x44 logo — never re-fetched, so it can't flicker on re-render
+let DEMO=false, STATE=null, SUB=loadSub(), POWER=true, CONNTS=null, UPTMR=null;
+let HEALTH={}, KSTACK={}, DASHTS=0, DASHBUSY=false, VPNPENDING=false, MOREOPEN=false, REFRESHING=false, CONNOPEN=false, DEVLIST=null, DEVTS=0, PINGING=false, PINGFADE=false, DEVFADE=false, SHEETOPEN=false, AUTHGONE=false;
+let VCACHE=(function(){try{return JSON.parse(localStorage.getItem('opm_versions'))||null;}catch(e){return null;}})();
+let PINGCFG=(function(){try{return JSON.parse(localStorage.getItem('opg.ping'))||null;}catch(e){return null;}})()||{url:'https://www.gstatic.com/generate_204',proto:'proxy-get',display:'time'};
+if(!PINGCFG.display)PINGCFG.display='time';
+let THEME=(function(){try{return localStorage.getItem('opg.theme')||'light';}catch(e){return 'light';}})();
+// slot has shown a real value (fade-in once, on spinner->value transition only).
+// versions/model start "seen" if cached -> shown instantly, no fade.
+let SEEN={timer:false, ver:!!(VCACHE&&VCACHE.xray), ip:false, node:!!(VCACHE&&VCACHE.model)};
+
+/* ---------- tiny helpers ---------- */
+const $=s=>document.querySelector(s), app=$('#app');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cleanName=s=>{try{return String(s||'').replace(/^\s*\p{Regional_Indicator}\p{Regional_Indicator}\s*/u,'').trim()||String(s||'')}catch(e){return String(s||'')}};
+function toast(msg,bad){const t=$('#toast');clearTimeout(t._t);clearTimeout(t._h);t.textContent=msg;t.style.display='block';void t.offsetWidth;t.className='toast show'+(bad?' bad':'');t._t=setTimeout(function(){t.className='toast'+(bad?' bad':'');t._h=setTimeout(function(){t.style.display='none';},350);},2600);}
+function loadSub(){try{return JSON.parse(localStorage.getItem('opg.sub'))||null}catch(e){return null}}
+function saveSub(){localStorage.setItem('opg.sub',JSON.stringify(SUB||null));if(!DEMO)apij('/subscription',{method:'PUT',body:JSON.stringify(SUB||{})}).catch(function(){});}
+async function loadSubServer(){if(DEMO)return;try{const r=await apij('/subscription');
+  if(r.ok&&r.body&&r.body.locations&&r.body.locations.length){SUB=r.body;localStorage.setItem('opg.sub',JSON.stringify(SUB));}
+  else if(SUB&&SUB.locations&&SUB.locations.length){apij('/subscription',{method:'PUT',body:JSON.stringify(SUB)}).catch(function(){});}  // migrate localStorage sub -> router
+}catch(e){}}
+
+async function apij(path,opts){
+  const r=await fetch(API+path,Object.assign({credentials:'same-origin',headers:{'Content-Type':'application/json'}},opts||{}));
+  let body=null; try{body=await r.json();}catch(e){}
+  if(r.status===401&&!DEMO&&path.indexOf('/auth/')!==0)authExpired();
+  return {ok:r.ok,status:r.status,body};
+}
+async function apitext(path){const r=await fetch(API+path,{credentials:'same-origin'});if(r.status===401&&!DEMO)authExpired();return r.ok?await r.text():('('+r.status+')');}
+// Session expired (cookie gone / router session invalid): drop to the login screen
+// instead of leaving the user on a stale page spamming "unauthorized" toasts.
+function authExpired(){if(AUTHGONE)return;AUTHGONE=true;clearInterval(UPTMR);app.innerHTML=viewLogin('Session expired — please sign in again');}
+
+/* ---------- demo data (preview / no router) ---------- */
+const DEMO_STATE={schemaVersion:2,activeCore:'xray',activeProfileId:'p1',settings:{ipv6Mode:'reject'},
+ profiles:[{id:'p1',name:'Profile 1',cores:{xray:{
+   proxyConfig:{transport:'reality',address:'vpn.example.com',port:443,uuid:'00000000-0000-0000-0000-000000000000',flow:'xtls-rprx-vision',publicKey:'PK',serverName:'www.cloudflare.com',shortId:'abcd',fingerprint:'random'},
+   muxConfig:{mode:'off',tcpConcurrency:8,xudpConcurrency:8,xudpProxyUDP443:'reject'},
+   domainStrategy:'IPIfNonMatch',fallbackOutbound:'vless-reality',
+   groups:[{id:'g-ai',name:'AI',enabled:true,outboundTag:'vless-reality',domains:['chatgpt.com','claude.ai'],cidrs:['1.2.3.0/24']},
+           {id:'g-stream',name:'Streaming',enabled:true,outboundTag:'vless-reality',domains:['netflix.com'],cidrs:[]},
+           {id:'g-bank',name:'Banking',enabled:true,outboundTag:'direct',domains:['sberbank.ru'],cidrs:[]},
+           {id:'g-iot',name:'Local IoT',enabled:true,outboundTag:'bypass',domains:[],cidrs:['10.0.0.0/8']},
+           {id:'g-tor',name:'Torrents',enabled:false,outboundTag:'bypass',domains:[],cidrs:[]}]},
+   mihomo:{proxyConfig:{transport:'reality'},rules:[],proxyGroups:[]}}}]};
+const DEMO_HEALTH={ok:true,healthStatus:'fd_warn',services:{xray:{running:true},singbox:{running:true},selfheal:{running:true}},
+  xrayFd:{count:412,limit:1024},conntrack:{count:3184,max:16384},vpnTunnel:{established:38,finWait:6,orphanFin:2,host:'vpn.example.com'}};
+const DEMO_STACK={ok:true,versions:{xray:'25.3.6',singbox:'1.13.8',kernel:'4.9.182',model:'Keenetic Giga (KN-1010)'},vpn:{exitIp:'188.114.x.x',sni:'www.cloudflare.com'},
+  xkeen:{policyName:'Policy42',policyDescription:'Opengater Proxy Manager'},resources:{memAvailKb:160000,memTotalKb:262144,diskUsedKb:1200000,diskTotalKb:3700000}};
+const DEMO_SUB={name:'My Opengater subscription',url:'https://opengater.com/sub/abc3f9',updated:'2h ago',activeIdx:0,
+  locations:[{name:'Netherlands · 2',flag:'🇳🇱',type:'reality',ping:'24 ms',address:'nl2.opengater.com',port:443},
+             {name:'Germany · 1',flag:'🇩🇪',type:'reality',ping:'31 ms',address:'de1.opengater.com',port:443},
+             {name:'Finland · 1',flag:'🇫🇮',type:'xhttp',ping:'28 ms',address:'fi1.opengater.com',port:443},
+             {name:'United States · 3',flag:'🇺🇸',type:'reality',ping:'96 ms',address:'us3.opengater.com',port:443}]};
+
+/* ---------- state accessors ---------- */
+function activeXray(){const p=(STATE.profiles||[]).find(x=>x.id===STATE.activeProfileId)||STATE.profiles[0];return p&&p.cores&&p.cores.xray||{};}
+async function loadState(){if(DEMO){STATE=JSON.parse(JSON.stringify(DEMO_STATE));return;}const r=await apij('/state');if(r.ok)STATE=r.body;else throw new Error('state '+r.status);}
+
+/* ---------- subscription parsing (client-side) ---------- */
+const C2={NL:'🇳🇱',DE:'🇩🇪',FI:'🇫🇮',US:'🇺🇸',GB:'🇬🇧',UK:'🇬🇧',FR:'🇫🇷',NId:'',SE:'🇸🇪',PL:'🇵🇱',TR:'🇹🇷',JP:'🇯🇵',SG:'🇸🇬',HK:'🇭🇰',RU:'🇷🇺',UA:'🇺🇦',CA:'🇨🇦',CH:'🇨🇭',AT:'🇦🇹',ES:'🇪🇸',IT:'🇮🇹',NO:'🇳🇴',LV:'🇱🇻',LT:'🇱🇹',EE:'🇪🇪',AM:'🇦🇲',KZ:'🇰🇿'};
+const NAMES={netherlands:'NL',germany:'DE',finland:'FI','united states':'US',usa:'US',america:'US','united kingdom':'GB',britain:'GB',france:'FR',sweden:'SE',poland:'PL',turkey:'TR',japan:'JP',singapore:'SG','hong kong':'HK',russia:'RU',ukraine:'UA',canada:'CA',switzerland:'CH',austria:'AT',spain:'ES',italy:'IT',norway:'NO',latvia:'LV',lithuania:'LT',estonia:'EE',armenia:'AM',kazakhstan:'KZ'};
+function flagFor(name){const m=String(name).match(/(\p{Regional_Indicator}\p{Regional_Indicator})/u);if(m)return m[1];const low=name.toLowerCase();for(const k in NAMES){if(low.includes(k))return C2[NAMES[k]]||'🌐';}const code=(name.match(/\b([A-Z]{2})\b/)||[])[1];if(code&&C2[code])return C2[code];if(code)return String.fromCodePoint(...[...code].map(c=>127397+c.charCodeAt(0)));return '🌐';}
+function parseVless(u){try{const url=new URL(u.trim());if(url.protocol!=='vless:')return null;const p=url.searchParams;const name=decodeURIComponent((url.hash||'').slice(1))||url.hostname;const net=(p.get('type')||'tcp').toLowerCase();const transport=(net==='xhttp'||net==='splithttp')?'xhttp':'reality';return{name,flag:flagFor(name),type:transport,ping:'',address:url.hostname,port:+url.port||443,uuid:decodeURIComponent(url.username||''),flow:p.get('flow')||'',publicKey:p.get('pbk')||'',serverName:p.get('sni')||url.hostname,shortId:p.get('sid')||'',fingerprint:p.get('fp')||'random',transport,xhttpPath:p.get('path')||'/',xhttpMode:p.get('mode')||'auto'};}catch(e){return null;}}
+function parseSubscription(text){text=text.trim();let lines=[];
+  if(/^vless:\/\//.test(text)){lines=text.split(/\s+/);}
+  else if(/^[A-Za-z0-9+/=\s]+$/.test(text)&&text.length>40){try{lines=atob(text.replace(/\s+/g,'')).split(/\r?\n/);}catch(e){lines=[];}}
+  else if(text[0]==='{'||text[0]==='['){try{const j=JSON.parse(text);
+    if(Array.isArray(j)&&j.length&&j[0]&&Array.isArray(j[0].outbounds))return j.map(nodeFromXrayConfig).filter(Boolean);
+    if(j&&Array.isArray(j.outbounds)&&j.outbounds.some(o=>o&&o.protocol==='vless')){const n=nodeFromXrayConfig(j);return n?[n]:[];}
+    const arr=Array.isArray(j)?j:(j.outbounds||j.servers||j.proxies||[]);
+    return arr.map(o=>typeof o==='string'?parseVless(o):vlessFromObj(o)).filter(Boolean);}catch(e){}}
+  if(!lines.length)lines=text.split(/\r?\n/);
+  return lines.map(l=>l.trim()).filter(l=>/^vless:\/\//.test(l)).map(parseVless).filter(Boolean);}
+function splitFlag(remarks){const s=String(remarks||'').trim();const m=s.match(/^(\p{Regional_Indicator}\p{Regional_Indicator})\s*(.*)$/u);if(m)return{flag:m[1],name:(m[2]||s).trim()||s};return{flag:flagFor(s),name:s};}
+function nodeFromXrayConfig(cfg){if(!cfg)return null;const ob=(cfg.outbounds||[]).find(o=>o&&o.protocol==='vless');if(!ob)return null;const vn=(ob.settings&&ob.settings.vnext&&ob.settings.vnext[0])||{};const u=(vn.users&&vn.users[0])||{};const ss=ob.streamSettings||{};const rs=ss.realitySettings||{};const net=(ss.network||'tcp').toLowerCase();const transport=(net==='xhttp'||net==='splithttp')?'xhttp':'reality';const xh=ss.xhttpSettings||ss.splithttpSettings||{};const sf=splitFlag(cfg.remarks||cfg.tag||vn.address||'node');return{name:sf.name,flag:sf.flag,type:transport,ping:'',address:vn.address,port:+vn.port||443,uuid:u.id,flow:u.flow||'',publicKey:rs.publicKey||'',serverName:rs.serverName||vn.address,shortId:rs.shortId||'',fingerprint:rs.fingerprint||'random',transport,xhttpPath:(xh.path||'/'),xhttpMode:(xh.mode||'auto')};}
+function vlessFromObj(o){if(!o)return null;const name=o.ps||o.name||o.remarks||o.tag||o.server||'node';return{name,flag:flagFor(name),type:'reality',ping:'',address:o.server||o.address||'',port:+(o.server_port||o.port)||443,uuid:o.uuid||o.id||'',flow:o.flow||'',publicKey:(o.reality&&o.reality.public_key)||o.pbk||'',serverName:o.sni||o.servername||o.server||'',shortId:(o.reality&&o.reality.short_id)||o.sid||'',fingerprint:o.fp||'random',transport:'reality',xhttpPath:'/',xhttpMode:'auto'};}
+
+/* apply a chosen location into state and push */
+async function applyLocation(idx){
+  const loc=SUB.locations[idx]; SUB.activeIdx=idx; saveSub();
+  if(loc.uuid){const x=activeXray();x.proxyConfig=Object.assign({},x.proxyConfig,{transport:loc.transport||'reality',address:loc.address,port:loc.port,uuid:loc.uuid,flow:loc.flow||'',publicKey:loc.publicKey,serverName:loc.serverName,shortId:loc.shortId,fingerprint:loc.fingerprint||'random',xhttpPath:loc.xhttpPath,xhttpMode:loc.xhttpMode});}
+  if(DEMO){POWER=true;CONNTS=Date.now();render();toast('Switched to '+cleanName(loc.name));return;}
+  const wasOn=POWER;
+  if(wasOn){VPNPENDING='on';CONNTS=null;}    // disconnect look + connecting animation on the new location
+  render();
+  await pushAndApply('Switched to '+cleanName(loc.name));
+  if(wasOn){VPNPENDING=false;POWER=true;CONNTS=Date.now();}
+  render();DASHTS=0;refreshDash();
+}
+async function pushAndApply(okMsg){
+  if(DEMO){toast(okMsg||'Applied (demo)');render();return;}
+  toast('Applying…');
+  let r=await apij('/state',{method:'PUT',body:JSON.stringify(STATE)});
+  if(!r.ok){toast('Save failed: '+((r.body&&r.body.detail)||r.status),true);return;}
+  r=await apij('/apply',{method:'POST',body:JSON.stringify(STATE)});
+  if(!r.ok||!r.body||!r.body.jobId){toast('Apply failed',true);return;}
+  const job=r.body.jobId;
+  for(let i=0;i<40;i++){await new Promise(s=>setTimeout(s,500));const j=await apij('/apply/'+job);if(j.ok&&j.body&&j.body.status!=='pending'){if(j.body.status==='ok'){toast(okMsg||'Applied');}else{toast('Apply failed: '+(j.body.detail||''),true);}render();return;}}
+  toast('Apply timed out',true);
+}
+
+/* ---------- router ---------- */
+const TABS=[['dashboard','Home'],['subscription','Subscriptions'],['routing','Routing'],['devices','Devices'],['logs','Logs'],['settings','Settings'],['ping','Ping']];
+const PARENT={logs:'settings',ping:'settings'};
+function go(h){location.hash=h;}
+let LASTNAV=(location.hash||'#dashboard').slice(1), NAVANIM=false, NAVDONE=null, NAVTMR=null;
+function navDepth(h){ if(!h||h==='dashboard')return 0; return PARENT[h]?2:1; }
+// Animated page transition (T1 iOS push / parallax). Only real hash navigation animates;
+// in-place render() calls (data refresh, toggles) stay instant. Cleanup is timeout-based,
+// NOT animationend — child fade/stagger animations inside the page also bubble animationend.
+function onNav(){
+  if(AUTHGONE)return;
+  var h=(location.hash||'#dashboard').slice(1);
+  if(!STATE){ LASTNAV=h; return; }            // boot owns the first paint
+  if(h===LASTNAV){ render(); return; }        // same page -> plain re-render
+  if(NAVANIM&&NAVDONE){ NAVDONE(); }           // finish any in-flight transition first
+  animateNav(LASTNAV,h); LASTNAV=h;
+}
+function animateNav(fromHash,toHash){
+  var appEl=document.getElementById('app'); if(!appEl){ render(); return; }
+  document.querySelectorAll('.pglayer').forEach(function(n){n.remove();});   // clean slate
+  appEl.classList.remove('pgincoming'); appEl.style.animation=''; appEl.style.zIndex='';
+  var dir=(navDepth(toHash)<navDepth(fromHash))?'back':'fwd';
+  var outL=document.createElement('div'); outL.className='pglayer'; outL.innerHTML=appEl.innerHTML;
+  document.body.appendChild(outL);
+  render();                                    // #app now holds the incoming page
+  appEl.classList.add('pgincoming');
+  var inKf=dir==='fwd'?'pgInR':'pgInLpar', outKf=dir==='fwd'?'pgOutLpar':'pgOutR';
+  if(dir==='fwd'){ appEl.style.zIndex=2; outL.style.zIndex=1; } else { appEl.style.zIndex=1; outL.style.zIndex=2; }
+  var T='.4s cubic-bezier(.4,0,.2,1) both';
+  void appEl.offsetWidth;
+  appEl.style.animation=inKf+' '+T; outL.style.animation=outKf+' '+T;
+  NAVANIM=true;
+  var fin=function(){ if(NAVTMR){clearTimeout(NAVTMR);NAVTMR=null;} NAVANIM=false; NAVDONE=null;
+    appEl.style.animation=''; appEl.classList.remove('pgincoming'); appEl.style.zIndex='';
+    if(outL.parentNode)outL.parentNode.removeChild(outL); };
+  NAVDONE=fin; NAVTMR=setTimeout(fin,430);
+}
+window.addEventListener('hashchange',onNav);
+
+function shell(active,inner){
+  var _sheet=subSheet(SUB||{name:'',url:'',locations:[]});
+  if(active!=='dashboard'){
+    var _t=(TABS.find(function(x){return x[0]===active;})||['',''])[1];
+    var _back=PARENT[active]||'dashboard';
+    return `<div class="wrap">
+    <div class="navbar"><button class="back" aria-label="Back" onclick="go('#${_back}')"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="navtitle">${_t}</span><span class="navsp"></span></div>
+    ${inner}${_sheet}</div>`;
+  }
+  const nv=(STATE&&STATE._node)?'<span class="'+((!SEEN.node)?'fade':'')+'">'+esc(STATE._node)+'</span>':'<span class="ld"></span>';
+  SEEN.node=SEEN.node||!!(STATE&&STATE._node);
+  return `<div class="wrap">
+    <div class="bar"><img class="mark" src="${LOGO}" alt="" style="cursor:pointer" onclick="go('#dashboard')" onerror="this.remove()"><span class="wordmark" style="cursor:pointer" onclick="go('#dashboard')">Opengater</span>
+      <span class="node">·</span><span class="node">${nv}</span>
+      ${DEMO?'<span class="node faint">· demo</span>':''}</div>
+    ${inner}${_sheet}</div>`;
+}
+
+/* ---------- screens ---------- */
+function viewDashboard(h,k){
+  const x=activeXray();const sub=SUB||DEMO_SUB;const loc=sub.locations[sub.activeIdx]||sub.locations[0]||{flag:'🌐',name:'—'};
+  const fd=h.xrayFd||{},ct=h.conntrack||{},mem=Math.round(((k.resources||{}).memTotalKb-(k.resources||{}).memAvailKb)/1024)||0;
+  const xUp=((h.services||{}).xray||{}).running,sUp=((h.services||{}).singbox||{}).running,shUp=((h.services||{}).selfheal||{}).running;
+  const HL=DEMO||!!(h&&h.services);                       // health response arrived
+  const SL=DEMO||!!(k&&k.versions);                       // stack response arrived
+  const spin='<span class="ld"></span>';
+  const xv=(k.versions||{}).xray||(VCACHE&&VCACHE.xray), sv=(k.versions||{}).singbox||(VCACHE&&VCACHE.singbox);
+  const fade=(on,v)=>'<span class="'+(on?'fade':'')+'">'+v+'</span>';   // fade-in once per slot
+  const fT=HL&&!SEEN.timer, fV=!!xv&&!SEEN.ver, fI=SL&&!SEEN.ip;
+  const _v=shell('dashboard',`
+    <div class="card power">
+      <button class="pbtn ${VPNPENDING?'pending':(POWER?'on':'off')}" onclick="togglePower()" title="Connect / disconnect"><span class="cmt"></span><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 7.4a8 8 0 1 0 11.2 0"/></svg></button>
+      <div><div class="pstate">${VPNPENDING?(VPNPENDING==='on'?'Connecting…':'Disconnecting…'):(POWER?'Connected':'Off')}</div><div class="ptimer tnum" id="up">${VPNPENDING?'—':(!HL?spin:fade(fT,POWER?fmtUp(upSec()):'—'))}</div></div>
+      <span class="grow"></span>
+      <div class="pexit">${!SL?spin:fade(fI,'<span class="flagip">'+flagImg(loc.flag)+'<span class="exip">'+(POWER?esc((k.vpn||{}).exitIp||'—'):'—')+'</span></span>')}</div>
+    </div>
+    <h2>Subscriptions</h2>
+    <div class="card conn ${CONNOPEN?'open':''}" id="conn">
+      <div class="head" onclick="CONNOPEN=!CONNOPEN;this.closest('.conn').classList.toggle('open',CONNOPEN)">
+        <span class="chev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
+        <div><div class="title">${esc(sub.name||'No subscription')}</div><div class="hsub">${sub.locations.length} locations${sub.updated?' · updated '+esc(sub.updated):''}</div></div>
+        <span class="grow"></span>
+        <button class="iconbtn ${REFRESHING?'spinning':''}" title="Refresh" onclick="event.stopPropagation();refreshSub()"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></button>
+        <div class="more"><button class="iconbtn" title="More" onclick="event.stopPropagation();toggleMore()"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg></button>${MOREOPEN?`<div class="menu" onclick="event.stopPropagation()"><button onclick="MOREOPEN=false;doPing()"><svg viewBox="0 0 24 24"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg>Test</button><button onclick="MOREOPEN=false;openSubSheet()"><svg viewBox="0 0 24 24"><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>Edit</button><button class="del" onclick="MOREOPEN=false;clearSub()"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Remove</button></div>`:''}</div>
+      </div>
+      <div class="loc-list"><div class="loc-inner">${sub.locations.map((l,i)=>locRow(l,i===sub.activeIdx,i)).join('')||'<div class="empty">No locations — add a subscription</div>'}</div></div>
+    </div>
+    <h2>Manage</h2>
+    <div class="rows">
+      ${mrow('routing','Routing',(x.groups||[]).length+' groups · who goes through VPN','M4 7h16M4 12h16M4 17h10')}
+      ${mrow('devices','Devices','Choose which devices use the VPN','M4 6h16v12H4zM9 21h6M12 18v3')}
+      ${mrow('settings','Settings','Core · IPv6 · FakeIP · policy','M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1zM15 12a3 3 0 1 0-6 0 3 3 0 1 0 6 0')}
+    </div>
+    <div class="foot" style="margin-top:auto;display:flex;gap:7px 18px;font-size:12px;color:var(--faint);padding:24px 4px 0">
+      <span class="svc"><span class="dot ${!HL?'wait':(!POWER?'wait':(xUp?'':'bad'))}"></span> xray ${xv?fade(fV,esc(xv)):spin}</span>
+      <span class="svc"><span class="dot ${!HL?'wait':(!POWER?'wait':(sUp?'':'bad'))}"></span> sing‑box ${sv?fade(fV,esc(sv)):spin}</span>
+      <span class="m tnum">fd ${fd.count||0} / ${fd.limit||0} · conntrack ${ct.max?Math.round(ct.count/ct.max*100):0}% · mem ${mem} MB</span>
+    </div>`);
+  SEEN.timer=SEEN.timer||HL; SEEN.ver=SEEN.ver||!!xv; SEEN.ip=SEEN.ip||SL;
+  return _v;
+}
+function pingBars(ms){var q=(typeof ms!=='number'||isNaN(ms))?0:(ms<80?4:ms<160?3:ms<300?2:1);var b='';for(var k=1;k<=4;k++){b+='<i'+(k<=q?' class="f"':'')+'></i>';}return '<span class="bars q'+q+'" title="'+(typeof ms==='number'&&!isNaN(ms)?ms+' ms':'no data')+'">'+b+'</span>';}
+function pingVal(p){if((PINGCFG.display||'time')==='bars'){var n=parseInt(p,10);return pingBars(isNaN(n)?null:n);}return esc(p);}
+// Twemoji SVG flags: emoji -> hex codepoints joined by '-' (drop the fe0f selector).
+function flagCps(e){var a=[];for(var ch of (e||'')){var cp=ch.codePointAt(0);if(cp!==0xfe0f)a.push(cp.toString(16));}return a.join('-');}
+function flagImg(e,sz){e=e||'🌐';var u='https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/'+flagCps(e)+'.svg';var st=sz?(' style="width:'+sz+'px;height:'+sz+'px"'):'';return '<img class="flag" data-e="'+esc(e)+'" src="'+u+'" alt=""'+st+' onerror="flagErr(this)">';}
+function flagErr(img){var e=img.getAttribute('data-e')||'🌐';var s=document.createElement('span');s.className='flag';s.textContent=e;if(img.parentNode)img.replaceWith(s);}
+function locRow(l,on,i){var pg=(PINGING&&l.address)?`<span class="ping" style="margin-left:auto"><span class="ld"></span></span>`:(l.ping?`<span class="ping ${PINGFADE?'fade':''}" style="margin-left:auto">${pingVal(l.ping)}</span>`:`<span class="ping" style="margin-left:auto"></span>`);return `<div class="loc ${on?'on':''}" onclick="applyLocation(${i})">${flagImg(l.flag)}
+  <div><div class="nm">${esc(cleanName(l.name))}</div></div><span class="type ${l.type==='xhttp'?'xhttp':'reality'}">${esc(l.type||'reality')}</span><span class="check">✓</span>${pg}</div>`;}
+function mrow(h,t,d,p){return `<div class="card pad lrow" onclick="go('#${h}')"><span class="ic"><svg viewBox="0 0 24 24"><path d="${p}"/></svg></span><div><div class="t">${t}</div><div class="d">${esc(d)}</div></div><span class="chev2">›</span></div>`;}
+
+function viewSubscription(){const sub=SUB||{name:'',url:'',locations:[]};const has=sub.locations&&sub.locations.length;
+  return shell('subscription',`
+    ${has?`
+      <div class="card lst"><div class="it" style="cursor:pointer" onclick="openSubSheet()"><div style="flex:1;min-width:0"><div class="k">${esc(sub.name||'Subscription')}</div><div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sub.url||sub._raw||'No URL')}</div></div><span class="chev2">›</span></div></div>
+      <h2>Locations (${sub.locations.length})</h2>
+      <div class="card conn open"><div class="loc-list"><div class="loc-inner">${sub.locations.map((l,i)=>locRow(l,i===sub.activeIdx,i)).join('')}</div></div></div>
+    `:`<div class="empty">No subscription yet.<br><button class="btn" style="margin-top:14px" onclick="openSubSheet()">Add subscription</button></div>`}`);
+}
+function subSheet(sub){const has=sub.locations&&sub.locations.length;return `
+  <div class="sheet-ov ${SHEETOPEN?'open':''}" id="subSheet">
+    <div class="sheet-bg" onclick="closeSubSheet()"></div>
+    <div class="sheet">
+      <div class="sheet-grab"></div>
+      <h3>${has?'Edit subscription':'Add subscription'}</h3>
+      <label class="fl">Name</label>
+      <input id="subName" value="${esc(sub.name||'')}" placeholder="My subscription">
+      <label class="fl" style="margin-top:14px">Subscription URL</label>
+      <input id="subUrl" value="${esc(sub.url||sub._raw||'')}" placeholder="https://…/sub" onkeydown="if(event.key==='Enter')doneSubSheet()">
+      <button class="btn" style="width:100%;margin-top:20px" onclick="doneSubSheet()">Done</button>
+      ${has?'<button class="btn ghost" style="width:100%;margin-top:10px" onclick="removeSubSheet()">Remove subscription</button>':''}
+    </div>
+  </div>`;}
+function openSubSheet(){MOREOPEN=false;SHEETOPEN=true;var m=document.querySelector('.menu');if(m)m.remove();var s=$('#subSheet');if(!s)return;s.classList.add('open');var n=$('#subName');if(n&&!n.value)setTimeout(function(){n.focus();},360);}
+function closeSubSheet(){SHEETOPEN=false;var s=$('#subSheet');if(s)s.classList.remove('open');}
+function doneSubSheet(){importSub();}
+function removeSubSheet(){closeSubSheet();setTimeout(function(){clearSub();},280);}
+async function importSub(){
+  const name=$('#subName').value.trim()||'Subscription', raw=$('#subUrl').value.trim();
+  if(!raw){toast('Enter a subscription URL',true);return;}
+  let text=raw, locs;
+  if(/^https?:\/\//.test(raw)){
+    if(DEMO){locs=DEMO_SUB.locations;}
+    else{try{text=await fetchSub(raw);locs=parseSubscription(text);}catch(e){toast('Could not fetch: '+(e.message||e),true);return;}}
+  } else {locs=parseSubscription(text);}
+  if(!locs||!locs.length){toast('No vless nodes found',true);return;}
+  const isUrl=/^https?:\/\//.test(raw);
+  const wasEmpty=!(SUB&&SUB.locations&&SUB.locations.length);
+  const keepIdx=(SUB&&typeof SUB.activeIdx==='number'&&SUB.activeIdx<locs.length)?SUB.activeIdx:0;
+  SUB={name,url:isUrl?raw:'',_raw:isUrl?raw:'',locations:locs,activeIdx:keepIdx,updated:'just now'};
+  saveSub();
+  SHEETOPEN=false;                                    // success -> sheet closes; re-renders stay closed
+  toast(locs.length+' locations imported');
+  if(wasEmpty){applyLocation(0);} else {render();}   // stay on the current page; sheet re-renders closed
+  measurePings(locs).then(()=>{saveSub();render();});
+}
+async function measurePings(locs){if(DEMO)return;var withAddr=locs.filter(function(l){return l.address;});if(!withAddr.length)return;PINGING=true;render();var targets=withAddr.map(function(l){return {address:l.address,port:l.port};});try{var r=await apij('/probe/batch',{method:'POST',body:JSON.stringify({targets:targets,proto:PINGCFG.proto,url:PINGCFG.url})});var res=(r.ok&&r.body&&r.body.results)||[];var j=0;locs.forEach(function(l){if(!l.address)return;var x=res[j++];l.ping=(x&&typeof x.ms==='number')?x.ms+' ms':'—';});}catch(e){}PINGING=false;PINGFADE=true;render();PINGFADE=false;}
+function clearSub(){SUB=null;saveSub();toast('Subscription removed');go('#subscription');}
+function toggleMore(){MOREOPEN=!MOREOPEN;render();}
+async function doPing(){if(!SUB||!SUB.locations||!SUB.locations.length)return;await measurePings(SUB.locations);saveSub();render();}
+async function refreshSub(){if(!SUB||!SUB.url){toast('No subscription URL — open Изменить');go('#subscription');return;}if(REFRESHING)return;REFRESHING=true;render();try{await importFromUrl();}finally{REFRESHING=false;render();}}
+async function fetchSub(url){const r=await apij('/subscription/fetch',{method:'POST',body:JSON.stringify({url})});if(r.ok&&r.body&&typeof r.body.content==='string')return r.body.content;throw new Error((r.body&&r.body.detail)||('status '+(r.status||'?')));}
+async function importFromUrl(){/* re-import stored url; show locations fast, ping in background */ if(!SUB||!SUB.url){go('#subscription');return;} try{const locs=parseSubscription(await fetchSub(SUB.url));if(!locs.length){toast('No nodes',true);return;}SUB.locations=locs;SUB.updated='just now';saveSub();toast('Refreshed');render();measurePings(locs).then(function(){saveSub();});}catch(e){toast('Refresh failed: '+(e.message||e),true);go('#subscription');}}
+
+function viewRouting(){const x=activeXray();const g=x.groups||[];
+  return shell('routing',`<h2>Routing groups</h2>
+    <div class="card lst">${g.map(gr=>`<div class="it"><div style="flex:1"><div class="k">${esc(gr.name)}</div><div class="sub">${(gr.domains||[]).length} domains · ${(gr.cidrs||[]).length} cidr</div></div>
+      <span class="pill ${gr.outboundTag==='vless-reality'?'vpn':(gr.outboundTag==='direct'?'direct':'bypass')}">${gr.outboundTag==='vless-reality'?'VPN':gr.outboundTag}</span>
+      <label class="switch" style="margin-left:12px"><input type="checkbox" ${gr.enabled!==false?'checked':''} onchange="toggleGroup('${esc(gr.id)}',this.checked)"><span class="sl"></span></label></div>`).join('')||'<div class="empty">No groups</div>'}</div>
+    <div style="margin-top:14px"><button class="btn sec" onclick="toast('Group editor — next iteration')">+ Add group</button></div>
+    <p class="faint" style="font-size:13px;margin:14px 4px">Domains/CIDR editor per group comes next. Toggle routes a group through VPN (vless‑reality), direct, or bypass.</p>`);
+}
+async function toggleGroup(id,on){const x=activeXray();const gr=(x.groups||[]).find(g=>g.id===id);if(gr){gr.enabled=on;await pushAndApply('Routing updated');}}
+
+function devCard(){return '<div class="card">'+(DEVLIST?(DEVLIST.length?devRows(DEVLIST):'<div class="empty">No devices found</div>'):'<div class="empty"><span class="ld"></span></div>')+'</div>';}
+function viewDevices(){return shell('devices',`<h2>Devices on this network</h2>
+  ${devCard()}
+  <p class="faint" style="font-size:13px;margin:14px 4px">The switch routes a device through the VPN (Keenetic “Opengater” policy). Turning it on registers the device on the router.</p>`);}
+async function loadDevices(){var first=!DEVLIST;DEVTS=Date.now();
+  if(DEMO){DEVLIST=[{hostname:'MacBook',ip:'192.168.5.81',mac:'52:45:75:89:ed:b0',active:true,vpn:false},{hostname:'iPhone',ip:'192.168.5.42',mac:'a4:83:e7:11:22:33',active:true,vpn:true},{name:'Samsung TV',ip:'192.168.5.10',mac:'aa:bb:cc:dd:ee:ff',active:false,vpn:false}];if(first)DEVFADE=true;render();DEVFADE=false;return;}
+  try{const r=await apij('/devices');if(r.ok)DEVLIST=(r.body&&r.body.devices)||[];}catch(e){}if(first)DEVFADE=true;render();DEVFADE=false;}
+function devRows(d){return '<div class="lst'+(DEVFADE?' devin':'')+'">'+d.map(x=>{const nm=esc(x.name||x.hostname||x.mac);return `<div class="it"><div style="flex:1;min-width:0"><div class="k" style="display:flex;align-items:center;gap:7px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</span><span class="dot${x.active?'':' off'}" title="${x.active?'online':'offline'}"></span></div><div class="sub tnum" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.ip||'')} · ${esc(x.mac||'')}</div></div><label class="switch"><input type="checkbox" data-mac="${esc(x.mac)}" ${x.vpn?'checked':''} onchange="toggleDevice(this.dataset.mac,this.checked,this)"><span class="sl"></span></label></div>`;}).join('')+'</div>';}
+async function toggleDevice(mac,on,el){if(DEMO){toast('VPN '+(on?'on':'off')+' (demo)');return;}if(el)el.disabled=true;toast('Updating…');const r=await apij('/devices/'+encodeURIComponent(mac)+'/vpn',{method:'POST',body:JSON.stringify({enabled:on})});toast(r.ok?('VPN '+(on?'enabled':'disabled')):'Failed: '+((r.body&&r.body.detail)||r.status),!r.ok);setTimeout(loadDevices,500);}
+
+let CURLOG='xray', CURLVL='all', LOGRAW='', XRLVL='warning';
+function viewLogs(){
+  return shell('logs',`<h2>Logs</h2>
+    <div class="tabs" style="margin-bottom:12px">${['xray','singbox','selfheal','health'].map(s=>`<button class="${s===CURLOG?'on':''}" onclick="CURLOG='${s}';render();loadLog()">${s}</button>`).join('')}</div>
+    <pre class="log" id="logbox">loading…</pre>`);
+}
+async function loadLog(){const box=$('#logbox');if(!box)return;
+  if(DEMO){LOGRAW='2026/06/20 04:31:02 [Warning] core fd=412\n2026/06/20 04:31:17 [Info] tunnel established 188.114.x.x:443\n2026/06/20 04:31:20 [Error] dial timeout to upstream\n2026/06/20 04:31:25 [Debug] reality handshake ok';applyLogFilter();return;}
+  LOGRAW=await apitext('/logs?svc='+CURLOG+'&n=200');applyLogFilter();}
+function setLevel(l){CURLVL=l;document.querySelectorAll('.lvls button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));applyLogFilter();}
+function applyLogFilter(){const box=$('#logbox');if(!box)return;let t=LOGRAW||'';
+  if(CURLVL!=='all'){t=t.split('\n').filter(l=>l.toLowerCase().includes(CURLVL)).join('\n')||'(no '+CURLVL+' lines)';}
+  box.textContent=t;}
+
+function viewPing(){return shell('ping',`
+    <h2>Test</h2>
+    <div class="card pad">
+      <label class="fl">Test URL</label>
+      <input id="pingurl" value="${esc(PINGCFG.url)}" onchange="setPingUrl(this.value)" placeholder="https://www.gstatic.com/generate_204">
+      <label class="fl" style="margin-top:14px">Protocol</label>
+      <select class="fld" style="margin-top:4px" onchange="setPingProto(this.value)">${[['proxy-get','via Proxy GET'],['proxy-head','via Proxy HEAD'],['tcp','TCP'],['icmp','ICMP']].map(o=>`<option value="${o[0]}" ${PINGCFG.proto===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
+    </div>
+    <h2>Display</h2>
+    <div class="card pad">
+      <label class="fl">How to show ping in the location list</label>
+      <select class="fld" style="margin-top:4px" onchange="setPingDisplay(this.value)">${[['time','Time (ms)'],['bars','Signal bars']].map(o=>`<option value="${o[0]}" ${(PINGCFG.display||'time')===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
+      <div class="pingprev">
+        <span class="pingprevlbl">Preview</span>
+        <span class="pingprevval">${PINGCFG.display==='bars'?pingBars(42)+pingBars(140)+pingBars(420):'<span class=\"ping\">42 ms</span>'}</span>
+      </div>
+    </div>`);}
+function viewSettings(){const ipv6=((STATE.settings||{}).ipv6Mode)||'reject';const core=STATE.activeCore||'xray';
+  return shell('settings',`<h2>Appearance</h2>
+    <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Dark mode</div><div class="sub">Switch between light and dark theme</div></div>
+      <label class="switch"><input type="checkbox" ${THEME==='dark'?'checked':''} onchange="setTheme(this.checked)"><span class="sl"></span></label></div></div>
+    <h2>Core</h2>
+    <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Proxy core</div><div class="sub">Xray or Mihomo</div></div>
+      <select style="width:auto" onchange="setCore(this.value)"><option value="xray" ${core==='xray'?'selected':''}>xray</option><option value="mihomo" ${core==='mihomo'?'selected':''}>mihomo</option></select></div></div>
+    <h2>Network</h2>
+    <div class="card lst">
+      <div class="it"><div style="flex:1"><div class="k">IPv6 for VPN devices</div><div class="sub">Reject prevents IPv6 leaks; Allow passes IPv6 through</div></div>
+        <select style="width:auto" onchange="setIpv6(this.value)"><option value="reject" ${ipv6==='reject'?'selected':''}>Reject</option><option value="allow" ${ipv6==='allow'?'selected':''}>Allow</option></select></div>
+      <div class="it"><div style="flex:1"><div class="k">FakeIP</div><div class="sub">Reliable domain routing for UDP/QUIC (mihomo) — soon</div></div><span class="pill bypass">soon</span></div>
+    </div>
+    <h2>Ping</h2>
+    <div class="card lst"><div class="it" style="cursor:pointer" onclick="go('#ping')"><div style="flex:1"><div class="k">Ping</div><div class="sub">Test URL · protocol · display mode</div></div><span class="chev2">›</span></div></div>
+    <h2>Logging</h2>
+    <div class="card lst">
+      <div class="it"><div style="flex:1"><div class="k">Log level</div><div class="sub">More verbose = bigger logs. Changing restarts xray.</div></div>
+        <select id="xrlvl" style="width:auto" onchange="setLogLevel(this.value)">${['none','error','warning','info','debug'].map(l=>`<option value="${l}" ${l===XRLVL?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="it" style="cursor:pointer" onclick="go('#logs')"><div style="flex:1"><div class="k">Logs</div><div class="sub">xray · sing‑box · self‑heal · health</div></div><span class="chev2">›</span></div>
+    </div>
+    <h2>Policy</h2>
+    <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Keenetic policy</div><div class="sub">Devices assigned here are managed by Opengater</div></div><span class="muted">Opengater Proxy Manager</span></div></div>`);
+}
+async function setCore(v){if(v==='mihomo'){toast('mihomo core is coming soon',true);render();return;}STATE.activeCore=v;if(!DEMO){const r=await apij('/core',{method:'PUT',body:JSON.stringify({core:v})});toast(r.ok?'Core: '+v:'Failed',!r.ok);}else toast('Core: '+v);}
+async function setIpv6(v){STATE.settings=Object.assign({},STATE.settings,{ipv6Mode:v});if(!DEMO){const r=await apij('/settings',{method:'PUT',body:JSON.stringify({ipv6Mode:v})});toast(r.ok?'IPv6: '+v:'Failed',!r.ok);}else toast('IPv6: '+v);}
+async function loadSettings(){if(DEMO)return;try{const r=await apij('/services/xray/loglevel');if(r.ok&&r.body&&r.body.level){XRLVL=r.body.level;const s=$('#xrlvl');if(s)s.value=XRLVL;}}catch(e){}}
+function setPingUrl(v){PINGCFG.url=(v||'').trim()||'https://www.gstatic.com/generate_204';localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));}
+function setPingProto(v){PINGCFG.proto=v;localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));toast('Ping protocol: '+v);}
+function setPingDisplay(v){PINGCFG.display=v;localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));toast(v==='bars'?'Ping shown as signal bars':'Ping shown as time');}
+function applyTheme(){document.documentElement.classList.toggle('dark',THEME==='dark');}
+function setTheme(on){THEME=on?'dark':'light';try{localStorage.setItem('opg.theme',THEME);}catch(e){}applyTheme();}
+async function setLogLevel(v){const old=XRLVL;XRLVL=v;if(DEMO){toast('xray log level: '+v+' (demo)');return;}toast('Applying '+v+' — restarting xray…');const r=await apij('/services/xray/loglevel',{method:'PUT',body:JSON.stringify({level:v})});if(r.ok){toast('xray log level: '+v);}else{XRLVL=old;const s=$('#xrlvl');if(s)s.value=old;toast('Failed: '+((r.body&&r.body.detail)||r.status),true);}}
+
+/* ---------- login ---------- */
+function viewLogin(msg){
+  return `<div class="login"><img class="mark" src="logo.png" alt="" onerror="this.style.display='none'">
+    <h1>Opengater Proxy Manager</h1><p>Sign in with your Keenetic router login and password.</p>
+    <div class="card"><input id="lgUser" placeholder="Login" value="admin" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <input id="lgPass" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn" style="width:100%" id="lgBtn" onclick="doLogin()">Sign in</button>
+      <div class="err" id="lgErr">${msg?esc(msg):''}</div></div></div>`;
+}
+async function doLogin(){
+  const u=$('#lgUser').value,p=$('#lgPass').value;if(!u||!p){$('#lgErr').textContent='Enter login and password';return;}
+  const b=$('#lgBtn');b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  const r=await apij('/auth/login',{method:'POST',body:JSON.stringify({loginB64:b64(u),passwordB64:b64(p)})});
+  if(r.ok){await boot();}else{b.disabled=false;b.textContent='Sign in';$('#lgErr').textContent=(r.body&&r.body.detail)||'Invalid credentials';}
+}
+async function logout(){if(!DEMO)await apij('/auth/logout',{method:'POST'});location.hash='';boot();}
+function b64(s){return btoa(unescape(encodeURIComponent(s)));}
+
+/* ---------- power / uptime ---------- */
+function fmtUp(s){const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h+':'+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');}
+function upSec(){return CONNTS?Math.max(0,Math.floor((Date.now()-CONNTS)/1000)):0;}
+function startUp(){clearInterval(UPTMR);if(POWER&&CONNTS&&(DEMO||(HEALTH&&HEALTH.services)))UPTMR=setInterval(()=>{const e=$('#up');if(e)e.textContent=fmtUp(upSec());},1000);}
+async function togglePower(){const want=!POWER;if(DEMO){POWER=want;CONNTS=want?Date.now():null;render();return;}if(VPNPENDING)return;
+  VPNPENDING=want?'on':'off';render();                       // comet spins until the real status resolves
+  const r=await apij('/vpn',{method:'PUT',body:JSON.stringify({enabled:want})});
+  VPNPENDING=false;
+  if(r.ok){POWER=(r.body&&typeof r.body.enabled==='boolean')?r.body.enabled:want;CONNTS=POWER?Date.now():null;toast(want?'VPN on':'VPN off');}
+  else{toast('Failed: '+((r.body&&r.body.detail)||r.status),true);}
+  render();DASHTS=0;refreshDash();}
+
+/* ---------- render ---------- */
+// Fetch health+stack in parallel in the background, then re-render the dashboard.
+async function refreshDash(){
+  if(AUTHGONE)return;
+  DASHBUSY=true;
+  try{
+    const [a,b]=await Promise.all([apij('/health').catch(()=>null),apij('/stack').catch(()=>null)]);
+    if(a&&a.ok)HEALTH=a.body;
+    if(b&&b.ok)KSTACK=b.body;
+    if(typeof HEALTH.vpnEnabled==='boolean')POWER=HEALTH.vpnEnabled;
+    else if(HEALTH.services&&HEALTH.services.xray)POWER=!!HEALTH.services.xray.running;
+    if(KSTACK.versions){VCACHE={xray:KSTACK.versions.xray,singbox:KSTACK.versions.singbox,model:KSTACK.versions.model};try{localStorage.setItem('opm_versions',JSON.stringify(VCACHE));}catch(e){}}
+    if(KSTACK.versions&&KSTACK.versions.model&&STATE)STATE._node=KSTACK.versions.model;
+    DASHTS=Date.now();
+  }finally{DASHBUSY=false;}
+  if((location.hash||'#dashboard').slice(1)!=='dashboard')return;
+  const ls=document.querySelectorAll('.ld');           // fade loaders out, then render values in
+  if(ls.length){ls.forEach(l=>{l.style.transition='opacity .18s';l.style.opacity='0';});await new Promise(r=>setTimeout(r,170));}
+  render();
+}
+function render(){
+  if(AUTHGONE){return;}                  // session expired: login view owns the screen
+  const h=(location.hash||'#dashboard').slice(1);
+  if(!STATE){return;}
+  const health=DEMO?DEMO_HEALTH:HEALTH,stack=DEMO?DEMO_STACK:KSTACK;
+  // Connection timer anchor: explicit toggles/location-switch set CONNTS precisely;
+  // on a fresh load seed it from xray uptime so the timer reads real connected time.
+  if(!VPNPENDING){ if(POWER){ if(!CONNTS && (DEMO||(HEALTH&&HEALTH.services))){const hu=health.xrayUptimeSec;CONNTS=Date.now()-((typeof hu==='number'?hu:0)*1000);} } else CONNTS=null; }
+  // Dashboard renders instantly from cached globals; refresh in the background (throttled).
+  if(!DEMO&&h==='dashboard'&&!DASHBUSY&&(Date.now()-DASHTS>5000))refreshDash();
+  if(STATE&&!STATE._node&&VCACHE&&VCACHE.model)STATE._node=VCACHE.model;
+  if(stack&&stack.versions&&stack.versions.model&&STATE)STATE._node=stack.versions.model;
+  if(!SUB)SUB=DEMO?JSON.parse(JSON.stringify(DEMO_SUB)):{name:'',url:'',locations:[],activeIdx:0};
+  let v;
+  if(h==='subscription')v=viewSubscription();
+  else if(h==='routing')v=viewRouting();
+  else if(h==='devices')v=viewDevices();
+  else if(h==='logs')v=viewLogs();
+  else if(h==='ping')v=viewPing();
+  else if(h==='settings')v=viewSettings();
+  else v=viewDashboard(health,stack);
+  app.innerHTML=v;
+  if(h==='dashboard'||!['subscription','routing','devices','logs','ping','settings'].includes(h))startUp();
+  if(h==='logs')loadLog();
+  if(h==='devices'&&(Date.now()-DEVTS>8000)){DEVTS=Date.now();loadDevices();}
+  if(h==='settings')loadSettings();
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  AUTHGONE=false;
+  try{
+    const r=await fetch(API+'/auth/session',{credentials:'same-origin'});
+    if(r.status===404){DEMO=true;}
+    else{const j=await r.json().catch(()=>({}));if(!j.authenticated){app.innerHTML=viewLogin();return;}}
+  }catch(e){DEMO=true;}
+  try{await loadState();}catch(e){if(!DEMO){app.innerHTML=viewLogin('Session expired');return;}STATE=JSON.parse(JSON.stringify(DEMO_STATE));}
+  await loadSubServer();
+  if(DEMO&&!SUB)SUB=JSON.parse(JSON.stringify(DEMO_SUB));
+  if(!location.hash)location.hash='#dashboard';
+  render();
+}
+document.addEventListener('click',function(e){if(MOREOPEN&&!(e.target.closest&&e.target.closest('.more'))){MOREOPEN=false;render();}});
+boot();
+</script>
+</body>
+</html>

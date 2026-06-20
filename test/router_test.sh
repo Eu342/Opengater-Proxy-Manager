@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$DIR/lib.sh"
+. "$DIR/../ui/xkeen-manager/backend/lib/router.sh"
+
+assert_eq "GET state"        "get_state"            "$(route_request GET  /v1/state)"
+assert_eq "PUT state"        "put_state"            "$(route_request PUT  /v1/state)"
+assert_eq "POST apply"       "post_apply"           "$(route_request POST /v1/apply)"
+assert_eq "GET apply job"    "get_apply_status"     "$(route_request GET  /v1/apply/abc123)"
+assert_eq "POST login"       "post_login"           "$(route_request POST /v1/auth/login)"
+assert_eq "GET health"       "get_health"           "$(route_request GET  /v1/health)"
+assert_eq "GET core"         "get_core"             "$(route_request GET  /v1/core)"
+assert_eq "GET subscription" "get_subscription"     "$(route_request GET  /v1/subscription)"
+assert_eq "PUT subscription" "put_subscription"     "$(route_request PUT  /v1/subscription)"
+assert_eq "subscription stub" "stub_501"            "$(route_request POST /v1/subscription/import)"
+assert_eq "GET devices"      "get_devices"          "$(route_request GET  /v1/devices)"
+assert_eq "POST device vpn"  "post_device_vpn"      "$(route_request POST /v1/devices/aa:bb:cc/vpn)"
+assert_eq "POST probe batch" "post_probe_batch"     "$(route_request POST /v1/probe/batch)"
+assert_eq "GET vpn"          "get_vpn"              "$(route_request GET  /v1/vpn)"
+assert_eq "PUT vpn"          "put_vpn"              "$(route_request PUT  /v1/vpn)"
+assert_eq "GET loglevel"     "get_loglevel"         "$(route_request GET  /v1/services/xray/loglevel)"
+assert_eq "PUT loglevel"     "put_loglevel"         "$(route_request PUT  /v1/services/xray/loglevel)"
+assert_eq "POST restart"     "post_restart"         "$(route_request POST /v1/services/xray/restart)"
+assert_eq "unknown route"    "not_found"            "$(route_request GET  /v1/nope)"
+assert_eq "bad method"       "method_not_allowed"   "$(route_request DELETE /v1/state)"
+test_summary
