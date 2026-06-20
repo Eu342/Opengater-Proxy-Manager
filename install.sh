@@ -261,6 +261,7 @@ deploy_sources() {
   log "Deploying backend (v2 /api/v1 + legacy)"
   deploy_file "$BACKEND/api.cgi"           /opt/share/xkeen-manager/api/api.cgi
   [ -f "$BACKEND/opm-update.sh" ] && deploy_file "$BACKEND/opm-update.sh" /opt/share/xkeen-manager/api/opm-update.sh
+  [ -f "$BACKEND/opm-geo.sh" ] && deploy_file "$BACKEND/opm-geo.sh" /opt/share/xkeen-manager/api/opm-geo.sh
   deploy_file "$BACKEND/routing.cgi"       /opt/share/xkeen-manager/api/routing.cgi
   deploy_file "$BACKEND/xkeen-selfheal.sh" /opt/share/xkeen-manager/api/xkeen-selfheal.sh
   deploy_file "$BACKEND/xkeen-runtime.sh"  /opt/share/xkeen-manager/api/xkeen-runtime.sh

@@ -140,7 +140,7 @@ cmd_apply() {
   cp "$B/lib/handlers/"*.sh "$N/api/lib/handlers/" 2>/dev/null
   printf '%s\n' "$(_ver_norm "$tag")" > "$N/VERSION"
   # carry user data forward (anything not shipped by the repo)
-  for keep in xkeen-ui-state.json subscription.json update-state.json update-status.json update-config.json logo.png httpd-auth.conf; do
+  for keep in xkeen-ui-state.json subscription.json update-state.json update-status.json update-config.json geo.json logo.png httpd-auth.conf; do
     [ -f "$ROOT/$keep" ] && [ ! -f "$N/$keep" ] && cp "$ROOT/$keep" "$N/$keep" 2>/dev/null
   done
   chmod 755 "$N/api/api.cgi" "$N/api/xkeen-runtime.sh" "$N/api/xkeen-selfheal.sh" "$N/api/opm-update.sh" 2>/dev/null

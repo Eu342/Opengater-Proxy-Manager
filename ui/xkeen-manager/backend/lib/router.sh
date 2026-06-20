@@ -45,6 +45,18 @@ route_request() {
       case "$_m" in GET) echo get_update_status ;; *) echo method_not_allowed ;; esac ;;
     /v1/update/config)
       case "$_m" in GET) echo get_update_config ;; PUT) echo put_update_config ;; *) echo method_not_allowed ;; esac ;;
+    /v1/geo)
+      case "$_m" in GET) echo get_geo ;; *) echo method_not_allowed ;; esac ;;
+    /v1/geo/groups)
+      case "$_m" in GET) echo get_geo_groups ;; *) echo method_not_allowed ;; esac ;;
+    /v1/geo/active)
+      case "$_m" in PUT) echo put_geo_active ;; *) echo method_not_allowed ;; esac ;;
+    /v1/geo/sources)
+      case "$_m" in POST) echo post_geo_sources ;; *) echo method_not_allowed ;; esac ;;
+    /v1/geo/sources/*/update)
+      case "$_m" in POST) echo post_geo_update ;; *) echo method_not_allowed ;; esac ;;
+    /v1/geo/sources/*/remove)
+      case "$_m" in POST) echo post_geo_remove ;; *) echo method_not_allowed ;; esac ;;
     /v1/subscription/*|/v1/cores/mihomo/*)
       echo stub_501 ;;
     *) echo not_found ;;
