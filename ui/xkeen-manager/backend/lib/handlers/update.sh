@@ -25,7 +25,10 @@ post_update_apply() {
   [ -n "$_tag" ] && [ "$_tag" != "null" ] || { http_error 400 no_tag "no target version (run check first)"; return; }
   [ -f "$_OPM_UPD" ] || { http_error 500 no_updater "updater not installed"; return; }
   jq -n --arg s starting '{state:$s,message:"Starting update",at:0}' > "$_OPM_UPD_STATUS" 2>/dev/null || true
-  nohup sh "$_OPM_UPD" apply "$_tag" >/opt/var/log/opm-update.log 2>&1 &
+  # Detach the updater so it survives this CGI exit AND the uhttpd restart it triggers.
+  # No nohup on busybox: a subshell-backgrounded job with redirected std streams is
+  # reparented to init and won't hold the CGI's stdout pipe open (uhttpd won't wait).
+  ( sh "$_OPM_UPD" apply "$_tag" >/opt/var/log/opm-update.log 2>&1 </dev/null & )
   http_ok "$(jq -n --arg t "$_tag" '{ok:true,started:true,tag:$t}')"
 }
 
