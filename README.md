@@ -148,4 +148,10 @@ node scripts/preview-static.js   # serves ui-v2/ on http://127.0.0.1:8123
 
 ## License
 
-Licensed under the [MIT License](LICENSE).
+**Proprietary — © 2026 Opengater. All rights reserved.** See [LICENSE](LICENSE).
+
+You may install and run **unmodified** copies for your own **personal,
+non-commercial** use. Without written permission you may **not** modify, fork,
+copy, or republish the source (including under a different name or brand),
+redistribute it, or use it for any commercial purpose. Licensing inquiries:
+e@opengater.com

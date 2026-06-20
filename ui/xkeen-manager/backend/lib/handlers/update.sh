@@ -32,3 +32,14 @@ post_update_apply() {
 get_update_status() {
   if [ -f "$_OPM_UPD_STATUS" ]; then http_ok "$(cat "$_OPM_UPD_STATUS")"; else http_ok '{"state":"idle"}'; fi
 }
+
+get_update_config() {
+  if [ -f "$_OPM_ROOT/update-config.json" ]; then http_ok "$(cat "$_OPM_ROOT/update-config.json")"; else http_ok '{"intervalSec":86400}'; fi
+}
+# check frequency: 86400 (daily) | 604800 (weekly) | 2592000 (monthly)
+put_update_config() {
+  _iv="$(cat | jq -r '.intervalSec // empty' 2>/dev/null)"
+  case "$_iv" in 86400|604800|2592000) : ;; *) http_error 400 bad_interval "intervalSec must be 86400, 604800 or 2592000"; return ;; esac
+  jq -n --argjson iv "$_iv" '{intervalSec:$iv}' > "$_OPM_ROOT/update-config.json" 2>/dev/null
+  http_ok "$(jq -n --argjson iv "$_iv" '{ok:true,intervalSec:$iv}')"
+}

@@ -20,11 +20,19 @@ VERSION_FILE="$ROOT/VERSION"
 STATE="$ROOT/update-state.json"
 STATUS="$ROOT/update-status.json"
 LOCK="$ROOT/.update.lock"
+CONFIG="$ROOT/update-config.json"
 CURL="/opt/bin/curl"
 JQ="/opt/bin/jq"
 
 _now() { date +%s 2>/dev/null || echo 0; }
 _cur_ver() { [ -f "$VERSION_FILE" ] && tr -d ' \t\r\n' < "$VERSION_FILE" || echo "0.0.0"; }
+# check frequency in seconds (default 24h); 86400=daily, 604800=weekly, 2592000=monthly
+_interval() {
+  iv="$("$JQ" -r '.intervalSec // empty' "$CONFIG" 2>/dev/null)"
+  case "$iv" in ''|*[!0-9]*) iv=86400 ;; esac
+  [ "$iv" -ge 3600 ] 2>/dev/null || iv=86400
+  echo "$iv"
+}
 _ver_norm() { printf '%s' "$1" | sed 's/^[vV]//' | sed 's/[^0-9.].*$//'; }
 # _ver_gt A B -> 0 (true) if A > B, numeric major.minor.patch
 _ver_gt() {
@@ -48,7 +56,7 @@ cmd_check() {
     ck="$("$JQ" -r '.checkedAt // 0' "$STATE" 2>/dev/null)"
     case "$ck" in ''|*[!0-9]*) ck=0 ;; esac
     age=$(( $(_now) - ck ))
-    [ "$age" -ge 0 ] && [ "$age" -lt 72000 ] && { cat "$STATE"; return 0; }
+    [ "$age" -ge 0 ] && [ "$age" -lt "$(_interval)" ] && { cat "$STATE"; return 0; }
   fi
   cur="$(_cur_ver)"
   body="$("$CURL" -s -L --max-time 20 -H 'Accept: application/vnd.github+json' \
@@ -56,8 +64,8 @@ cmd_check() {
   tag="$(printf '%s' "$body" | "$JQ" -r '.tag_name // empty' 2>/dev/null)"
   if [ -z "$tag" ]; then
     # no releases yet / API error -> report "up to date" without failing
-    "$JQ" -n --arg c "$cur" --argjson t "$(_now)" \
-      '{current:$c,latest:$c,updateAvailable:false,notes:"",htmlUrl:"",checkedAt:$t,error:"no release"}' \
+    "$JQ" -n --arg c "$cur" --argjson t "$(_now)" --argjson iv "$(_interval)" \
+      '{current:$c,latest:$c,updateAvailable:false,notes:"",htmlUrl:"",checkedAt:$t,intervalSec:$iv,error:"no release"}' \
       | tee "$STATE" 2>/dev/null
     return 0
   fi
@@ -66,8 +74,8 @@ cmd_check() {
   pub="$(printf '%s' "$body" | "$JQ" -r '.published_at // ""' 2>/dev/null)"
   upd=false; _ver_gt "$tag" "$cur" && upd=true
   "$JQ" -n --arg c "$cur" --arg l "$(_ver_norm "$tag")" --arg tag "$tag" --argjson u "$upd" \
-    --arg n "$notes" --arg url "$url" --arg pub "$pub" --argjson t "$(_now)" \
-    '{current:$c,latest:$l,tag:$tag,updateAvailable:$u,notes:$n,htmlUrl:$url,publishedAt:$pub,checkedAt:$t}' \
+    --arg n "$notes" --arg url "$url" --arg pub "$pub" --argjson t "$(_now)" --argjson iv "$(_interval)" \
+    '{current:$c,latest:$l,tag:$tag,updateAvailable:$u,notes:$n,htmlUrl:$url,publishedAt:$pub,checkedAt:$t,intervalSec:$iv}' \
     | tee "$STATE" 2>/dev/null
 }
 

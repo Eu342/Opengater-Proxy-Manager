@@ -601,11 +601,19 @@ function updatesCard(){
         ? `<div class="sub" style="margin:12px 0 8px">This downloads v${esc(UPD.latest)} and restarts the panel. If it fails it rolls back automatically.</div>
            <div style="display:flex;gap:10px"><button class="btn" style="flex:1" onclick="applyUpdate()">Yes, update now</button><button class="btn ghost" style="flex:1" onclick="UPDARMED=false;render()">Cancel</button></div>`
         : `<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" style="flex:1" onclick="UPDARMED=true;render()">Update now</button><button class="btn ghost" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check again'}</button></div>`}
-    </div>`;
+    </div>`+freqCard();
   }
   return `<div class="card lst"><div class="it"><div style="flex:1"><div class="k">Version ${esc(cur)}</div><div class="sub">${UPD&&UPD.checkedAt?'On the latest version':'Tap to check for updates'}</div></div>
-    <button class="btn sec sm" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check for updates'}</button></div></div>`;
+    <button class="btn sec sm" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check for updates'}</button></div></div>`+freqCard();
 }
+function freqCard(){
+  var iv=(UPD&&UPD.intervalSec)||86400;
+  return `<div class="card lst" style="margin-top:12px"><div class="it"><div style="flex:1"><div class="k">Check for updates</div><div class="sub">How often the router checks automatically</div></div>
+    <select style="width:auto" onchange="setUpdateInterval(this.value)">${[[86400,'Daily'],[604800,'Weekly'],[2592000,'Monthly']].map(o=>`<option value="${o[0]}" ${iv==o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div></div>`;
+}
+async function setUpdateInterval(v){var iv=parseInt(v,10)||86400;var nm={86400:'Daily',604800:'Weekly',2592000:'Monthly'}[iv]||'';if(UPD)UPD.intervalSec=iv;
+  if(DEMO){toast('Update check: '+nm);return;}
+  try{const r=await apij('/update/config',{method:'PUT',body:JSON.stringify({intervalSec:iv})});toast(r.ok?('Update check: '+nm):'Failed',!r.ok);}catch(e){toast('Failed',true);}}
 async function setCore(v){if(v==='mihomo'){toast('mihomo core is coming soon',true);render();return;}STATE.activeCore=v;if(!DEMO){const r=await apij('/core',{method:'PUT',body:JSON.stringify({core:v})});toast(r.ok?'Core: '+v:'Failed',!r.ok);}else toast('Core: '+v);}
 async function setIpv6(v){STATE.settings=Object.assign({},STATE.settings,{ipv6Mode:v});if(!DEMO){const r=await apij('/settings',{method:'PUT',body:JSON.stringify({ipv6Mode:v})});toast(r.ok?'IPv6: '+v:'Failed',!r.ok);}else toast('IPv6: '+v);}
 async function loadSettings(){if(DEMO)return;try{const r=await apij('/services/xray/loglevel');if(r.ok&&r.body&&r.body.level){XRLVL=r.body.level;const s=$('#xrlvl');if(s)s.value=XRLVL;}}catch(e){}}

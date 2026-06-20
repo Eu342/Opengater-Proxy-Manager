@@ -43,6 +43,8 @@ route_request() {
       case "$_m" in POST) echo post_update_apply ;; *) echo method_not_allowed ;; esac ;;
     /v1/update/status)
       case "$_m" in GET) echo get_update_status ;; *) echo method_not_allowed ;; esac ;;
+    /v1/update/config)
+      case "$_m" in GET) echo get_update_config ;; PUT) echo put_update_config ;; *) echo method_not_allowed ;; esac ;;
     /v1/subscription/*|/v1/cores/mihomo/*)
       echo stub_501 ;;
     *) echo not_found ;;

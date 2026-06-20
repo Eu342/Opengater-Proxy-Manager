@@ -20,6 +20,8 @@ assert_eq "POST probe batch" "post_probe_batch"     "$(route_request POST /v1/pr
 assert_eq "GET update check" "get_update_check"     "$(route_request GET  /v1/update/check)"
 assert_eq "POST update apply" "post_update_apply"   "$(route_request POST /v1/update/apply)"
 assert_eq "GET update status" "get_update_status"   "$(route_request GET  /v1/update/status)"
+assert_eq "GET update config" "get_update_config"   "$(route_request GET  /v1/update/config)"
+assert_eq "PUT update config" "put_update_config"   "$(route_request PUT  /v1/update/config)"
 assert_eq "GET vpn"          "get_vpn"              "$(route_request GET  /v1/vpn)"
 assert_eq "PUT vpn"          "put_vpn"              "$(route_request PUT  /v1/vpn)"
 assert_eq "GET loglevel"     "get_loglevel"         "$(route_request GET  /v1/services/xray/loglevel)"

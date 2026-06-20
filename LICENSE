@@ -1,21 +1,40 @@
-MIT License
+Opengater Proxy Manager — Proprietary License
+Copyright (c) 2026 Opengater. All rights reserved.
 
-Copyright (c) 2026 Opengater (https://github.com/Eu342/Opengater-Proxy-Manager)
+This software, including its source code, user interface, scripts, and
+documentation (the "Software"), is the exclusive property of Opengater and is
+protected by copyright and other intellectual-property laws.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+PERMITTED USE
+You are granted a limited, personal, non-exclusive, non-transferable, revocable
+right to install and run UNMODIFIED copies of the Software on Keenetic router(s)
+that you own or operate, for your own personal, non-commercial use only.
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+PROHIBITED, WITHOUT PRIOR WRITTEN PERMISSION FROM Opengater
+You may NOT:
+  1. modify, adapt, translate, reverse-engineer, or create derivative works of
+     the Software, in whole or in part;
+  2. copy, mirror, fork, publish, or otherwise reproduce the source code, in
+     whole or in part, including under a different name, brand, or authorship;
+  3. redistribute, sublicense, sell, rent, lease, lend, or otherwise make the
+     Software available to any third party;
+  4. use the Software, or any portion of it, for any commercial purpose,
+     including reselling, hosting as a paid service, or bundling with a product
+     or service offered for a fee;
+  5. remove, alter, or obscure any copyright, trademark, or proprietary notice.
 
+No rights are granted other than those expressly stated above. All rights not
+expressly granted are reserved by Opengater.
+
+TERMINATION
+This license terminates automatically if you breach any of its terms. Upon
+termination you must cease all use of the Software and destroy all copies.
+
+NO WARRANTY
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL Opengater BE
+LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For licensing inquiries, contact: e@opengater.com
