@@ -122,6 +122,10 @@
   .btn.sm{padding:8px 13px;font-size:12.5px;align-self:center;white-space:nowrap}
   .relnotes{margin-top:12px;padding:11px 13px;background:rgba(118,118,128,.1);color:#474747;border-radius:11px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:170px;overflow:auto}
   .dark .relnotes{background:rgba(118,118,128,.16);color:#c7c7cc}
+  .upbar{height:8px;border-radius:5px;background:rgba(118,118,128,.2);overflow:hidden;margin-top:15px}
+  .upbar i{display:block;height:100%;width:0;background:var(--blue);border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+  .upbar.ok i{background:var(--green)}
+  .okmark{width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:none}
   .dot.bad{background:var(--red)} .dot.warn{background:var(--amber)} .dot.wait{background:var(--faint)}
   .ld{display:inline-block;width:11px;height:11px;border:2px solid var(--faint);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite, fadein .25s ease;vertical-align:-1px}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -346,8 +350,8 @@ async function pushAndApply(okMsg){
 }
 
 /* ---------- router ---------- */
-const TABS=[['dashboard','Home'],['subscription','Subscriptions'],['routing','Routing'],['devices','Devices'],['logs','Logs'],['settings','Settings'],['ping','Ping']];
-const PARENT={logs:'settings',ping:'settings'};
+const TABS=[['dashboard','Home'],['subscription','Subscriptions'],['routing','Routing'],['devices','Devices'],['logs','Logs'],['settings','Settings'],['ping','Ping'],['update','Software Updates']];
+const PARENT={logs:'settings',ping:'settings',update:'settings'};
 function go(h){location.hash=h;}
 let LASTNAV=(location.hash||'#dashboard').slice(1), NAVANIM=false, NAVDONE=null, NAVTMR=null;
 function navDepth(h){ if(!h||h==='dashboard')return 0; return PARENT[h]?2:1; }
@@ -560,41 +564,51 @@ function viewPing(){return shell('ping',`
       </div>
     </div>`);}
 function viewSettings(){const ipv6=((STATE.settings||{}).ipv6Mode)||'reject';const core=STATE.activeCore||'xray';
-  return shell('settings',`<h2>Appearance</h2>
-    <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Dark mode</div><div class="sub">Switch between light and dark theme</div></div>
-      <label class="switch"><input type="checkbox" ${THEME==='dark'?'checked':''} onchange="setTheme(this.checked)"><span class="sl"></span></label></div></div>
-    <h2>Core</h2>
-    <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Proxy core</div><div class="sub">Xray or Mihomo</div></div>
-      <select style="width:auto" onchange="setCore(this.value)"><option value="xray" ${core==='xray'?'selected':''}>xray</option><option value="mihomo" ${core==='mihomo'?'selected':''}>mihomo</option></select></div></div>
+  const swSub=(UPD&&UPD.updateAvailable)?('Update available — v'+esc(UPD.latest)):('Version '+esc((UPD&&UPD.current)||'—'));
+  return shell('settings',`<h2>Software Updates</h2>
+    <div class="card lst"><div class="it" style="cursor:pointer" onclick="go('#update')"><div style="flex:1;min-width:0"><div class="k" style="display:inline-flex;align-items:center;gap:7px">Software Updates${UPD&&UPD.updateAvailable?'<span class="updot"></span>':''}</div><div class="sub">${swSub}</div></div><span class="chev2">›</span></div></div>
     <h2>Network</h2>
     <div class="card lst">
       <div class="it"><div style="flex:1"><div class="k">IPv6 for VPN devices</div><div class="sub">Reject prevents IPv6 leaks; Allow passes IPv6 through</div></div>
         <select style="width:auto" onchange="setIpv6(this.value)"><option value="reject" ${ipv6==='reject'?'selected':''}>Reject</option><option value="allow" ${ipv6==='allow'?'selected':''}>Allow</option></select></div>
       <div class="it"><div style="flex:1"><div class="k">FakeIP</div><div class="sub">Reliable domain routing for UDP/QUIC (mihomo) — soon</div></div><span class="pill bypass">soon</span></div>
     </div>
-    <h2>Ping</h2>
-    <div class="card lst"><div class="it" style="cursor:pointer" onclick="go('#ping')"><div style="flex:1"><div class="k">Ping</div><div class="sub">Test URL · protocol · display mode</div></div><span class="chev2">›</span></div></div>
+    <h2>Advanced</h2>
+    <div class="card lst">
+      <div class="it"><div style="flex:1"><div class="k">Dark mode</div><div class="sub">Switch between light and dark theme</div></div>
+        <label class="switch"><input type="checkbox" ${THEME==='dark'?'checked':''} onchange="setTheme(this.checked)"><span class="sl"></span></label></div>
+      <div class="it"><div style="flex:1"><div class="k">Proxy core</div><div class="sub">Xray or Mihomo</div></div>
+        <select style="width:auto" onchange="setCore(this.value)"><option value="xray" ${core==='xray'?'selected':''}>xray</option><option value="mihomo" ${core==='mihomo'?'selected':''}>mihomo</option></select></div>
+      <div class="it" style="cursor:pointer" onclick="go('#ping')"><div style="flex:1"><div class="k">Ping</div><div class="sub">Test URL · protocol · display mode</div></div><span class="chev2">›</span></div>
+    </div>
     <h2>Logging</h2>
     <div class="card lst">
       <div class="it"><div style="flex:1"><div class="k">Log level</div><div class="sub">More verbose = bigger logs. Changing restarts xray.</div></div>
         <select id="xrlvl" style="width:auto" onchange="setLogLevel(this.value)">${['none','error','warning','info','debug'].map(l=>`<option value="${l}" ${l===XRLVL?'selected':''}>${l}</option>`).join('')}</select></div>
       <div class="it" style="cursor:pointer" onclick="go('#logs')"><div style="flex:1"><div class="k">Logs</div><div class="sub">xray · sing‑box · self‑heal · health</div></div><span class="chev2">›</span></div>
     </div>
-    <h2>Software Updates</h2>
-    ${updatesCard()}
     <h2>Policy</h2>
     <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Keenetic policy</div><div class="sub">Devices assigned here are managed by Opengater</div></div><span class="muted">Opengater Proxy Manager</span></div></div>`);
 }
-function updatesCard(){
-  if(UPDDOING){
-    var st=UPDDOING.state||'starting';
-    var lbl={starting:'Starting…',downloading:'Downloading…',validating:'Validating…',installing:'Installing…',swapping:'Applying…',restarting:'Restarting…',done:'Done',failed:'Failed'}[st]||st;
-    return `<div class="card pad"><div style="display:flex;align-items:center;gap:12px"><span class="ld"></span><div><div class="k">${esc(lbl)}</div><div class="sub">${esc(UPDDOING.message||'Updating — the panel will reload automatically')}</div></div></div></div>`;
-  }
-  var cur=(UPD&&UPD.current)||'—';
-  if(UPD&&UPD.updateAvailable){
+/* Software Updates page (#update) */
+function _updStage(s){return ({starting:[6,'Starting…'],downloading:[28,'Downloading…'],validating:[48,'Validating…'],installing:[66,'Installing…'],swapping:[82,'Applying…'],restarting:[93,'Restarting…'],done:[100,'Update successful'],failed:[100,'Update failed']})[s]||[6,s||'Starting…'];}
+function updMsg(st){return st.state==='done'?('Updated to v'+(st.version||(UPD&&UPD.latest)||'')+' · reloading…'):('Updating to v'+((UPD&&UPD.latest)||''));}
+function updProgressCard(){var st=UPDDOING||{state:'starting'};var sg=_updStage(st.state);var done=st.state==='done';
+  return `<div class="card pad">
+    <div style="display:flex;align-items:center;gap:12px">${done?'<span id="upspin" class="okmark">✓</span>':'<span id="upspin" class="ld"></span>'}<div style="flex:1;min-width:0"><div class="k" id="uplbl">${esc(sg[1])}</div><div class="sub" id="upmsg">${esc(updMsg(st))}</div></div></div>
+    <div class="upbar ${done?'ok':''}" id="upbar"><i id="upfill" style="width:${sg[0]}%"></i></div>
+  </div>`;}
+function updProgressApply(st){var fill=$('#upfill');if(!fill)return false;var sg=_updStage(st.state);var done=st.state==='done';
+  fill.style.width=sg[0]+'%';var l=$('#uplbl');if(l)l.textContent=sg[1];var m=$('#upmsg');if(m)m.textContent=updMsg(st);
+  var bar=$('#upbar');if(bar)bar.classList.toggle('ok',done);
+  var sp=$('#upspin');if(done&&sp&&sp.className!=='okmark'){sp.className='okmark';sp.textContent='✓';}
+  return true;}
+function viewUpdate(){
+  var cur=(UPD&&UPD.current)||'—',inner;
+  if(UPDDOING){ inner=updProgressCard(); }
+  else if(UPD&&UPD.updateAvailable){
     var notes=(UPD.notes||'').trim();
-    return `<div class="card pad">
+    inner=`<div class="card pad">
       <div style="display:flex;align-items:center;gap:10px"><span class="updot"></span><div style="flex:1"><div class="k">Update available — v${esc(UPD.latest)}</div><div class="sub">You're on v${esc(cur)}</div></div></div>
       ${notes?`<div class="relnotes">${esc(notes)}</div>`:''}
       ${UPDARMED
@@ -602,9 +616,11 @@ function updatesCard(){
            <div style="display:flex;gap:10px"><button class="btn" style="flex:1" onclick="applyUpdate()">Yes, update now</button><button class="btn ghost" style="flex:1" onclick="UPDARMED=false;render()">Cancel</button></div>`
         : `<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" style="flex:1" onclick="UPDARMED=true;render()">Update now</button><button class="btn ghost" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check again'}</button></div>`}
     </div>`+freqCard();
+  } else {
+    inner=`<div class="card lst"><div class="it"><div style="flex:1"><div class="k">Version ${esc(cur)}</div><div class="sub">${UPD&&UPD.checkedAt?'On the latest version':'Tap to check for updates'}</div></div>
+      <button class="btn sec sm" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check for updates'}</button></div></div>`+freqCard();
   }
-  return `<div class="card lst"><div class="it"><div style="flex:1"><div class="k">Version ${esc(cur)}</div><div class="sub">${UPD&&UPD.checkedAt?'On the latest version':'Tap to check for updates'}</div></div>
-    <button class="btn sec sm" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check for updates'}</button></div></div>`+freqCard();
+  return shell('update',inner);
 }
 function freqCard(){
   var iv=(UPD&&UPD.intervalSec)||86400;
@@ -623,7 +639,7 @@ function setPingDisplay(v){PINGCFG.display=v;localStorage.setItem('opg.ping',JSO
 /* ---------- software updates ---------- */
 async function loadUpdate(force){if(DEMO)return;if(force){UPDBUSY=true;render();}
   try{const r=await apij('/update/check'+(force?'?force=1':''));if(r.ok&&r.body)UPD=r.body;}catch(e){}
-  UPDBUSY=false;if(force||(location.hash||'').indexOf('settings')>=0||(location.hash||'').indexOf('dashboard')>=0||!location.hash)render();}
+  UPDBUSY=false;if(force||/settings|dashboard|update/.test(location.hash||'')||!location.hash)render();}
 function checkUpdate(){loadUpdate(true);}
 async function applyUpdate(){if(!UPD||!UPD.updateAvailable)return;UPDARMED=false;var tag=UPD.tag||('v'+UPD.latest);
   UPDDOING={state:'starting',message:'Starting update'};render();
@@ -635,8 +651,9 @@ function pollUpdate(elapsed){clearTimeout(UPDPOLL);
   if(elapsed>150000){UPDDOING=null;toast('Update timed out — reload to verify',true);render();return;}
   UPDPOLL=setTimeout(async function(){var st=null;
     try{const r=await apij('/update/status');if(r.ok&&r.body)st=r.body;}catch(e){}   // server may be restarting — keep polling
-    if(st&&st.state){UPDDOING=st;render();
-      if(st.state==='done'){toast('Updated to v'+(st.version||(UPD&&UPD.latest)||''));setTimeout(function(){location.reload();},1600);return;}
+    if(st&&st.state){UPDDOING=st;
+      if(!updProgressApply(st))render();    // update bar/label in place (smooth forward); rebuild if the card isn't mounted
+      if(st.state==='done'){setTimeout(function(){location.reload();},1800);return;}
       if(st.state==='failed'){UPDDOING=null;toast(st.message||'Update failed',true);render();loadUpdate(true);return;}}
     pollUpdate(elapsed+2000);},2000);}
 function applyTheme(){document.documentElement.classList.toggle('dark',THEME==='dark');}
@@ -712,10 +729,11 @@ function render(){
   else if(h==='devices')v=viewDevices();
   else if(h==='logs')v=viewLogs();
   else if(h==='ping')v=viewPing();
+  else if(h==='update')v=viewUpdate();
   else if(h==='settings')v=viewSettings();
   else v=viewDashboard(health,stack);
   app.innerHTML=v;
-  if(h==='dashboard'||!['subscription','routing','devices','logs','ping','settings'].includes(h))startUp();
+  if(h==='dashboard'||!['subscription','routing','devices','logs','ping','update','settings'].includes(h))startUp();
   if(h==='logs')loadLog();
   if(h==='devices'&&(Date.now()-DEVTS>8000)){DEVTS=Date.now();loadDevices();}
   if(h==='settings')loadSettings();
