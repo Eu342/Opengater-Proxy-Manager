@@ -567,6 +567,9 @@ function viewSettings(){const ipv6=((STATE.settings||{}).ipv6Mode)||'reject';con
   const swSub=(UPD&&UPD.updateAvailable)?('Update available — v'+esc(UPD.latest)):('Version '+esc((UPD&&UPD.current)||'—'));
   return shell('settings',`<h2>Software Updates</h2>
     <div class="card lst"><div class="it" style="cursor:pointer" onclick="go('#update')"><div style="flex:1;min-width:0"><div class="k" style="display:inline-flex;align-items:center;gap:7px">Software Updates${UPD&&UPD.updateAvailable?'<span class="updot"></span>':''}</div><div class="sub">${swSub}</div></div><span class="chev2">›</span></div></div>
+    <h2>Appearance</h2>
+    <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Dark mode</div><div class="sub">Switch between light and dark theme</div></div>
+      <label class="switch"><input type="checkbox" ${THEME==='dark'?'checked':''} onchange="setTheme(this.checked)"><span class="sl"></span></label></div></div>
     <h2>Network</h2>
     <div class="card lst">
       <div class="it"><div style="flex:1"><div class="k">IPv6 for VPN devices</div><div class="sub">Reject prevents IPv6 leaks; Allow passes IPv6 through</div></div>
@@ -575,8 +578,6 @@ function viewSettings(){const ipv6=((STATE.settings||{}).ipv6Mode)||'reject';con
     </div>
     <h2>Advanced</h2>
     <div class="card lst">
-      <div class="it"><div style="flex:1"><div class="k">Dark mode</div><div class="sub">Switch between light and dark theme</div></div>
-        <label class="switch"><input type="checkbox" ${THEME==='dark'?'checked':''} onchange="setTheme(this.checked)"><span class="sl"></span></label></div>
       <div class="it"><div style="flex:1"><div class="k">Proxy core</div><div class="sub">Xray or Mihomo</div></div>
         <select style="width:auto" onchange="setCore(this.value)"><option value="xray" ${core==='xray'?'selected':''}>xray</option><option value="mihomo" ${core==='mihomo'?'selected':''}>mihomo</option></select></div>
       <div class="it" style="cursor:pointer" onclick="go('#ping')"><div style="flex:1"><div class="k">Ping</div><div class="sub">Test URL · protocol · display mode</div></div><span class="chev2">›</span></div>
