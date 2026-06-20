@@ -30,6 +30,7 @@ assert_eq "POST geo update"  "post_geo_update"      "$(route_request POST /v1/ge
 assert_eq "POST geo remove"  "post_geo_remove"      "$(route_request POST /v1/geo/sources/my-id/remove)"
 assert_eq "GET routing"      "get_routing"          "$(route_request GET  /v1/routing)"
 assert_eq "PUT routing"      "put_routing"          "$(route_request PUT  /v1/routing)"
+assert_eq "POST routing apply" "post_routing_apply" "$(route_request POST /v1/routing/apply)"
 assert_eq "GET vpn"          "get_vpn"              "$(route_request GET  /v1/vpn)"
 assert_eq "PUT vpn"          "put_vpn"              "$(route_request PUT  /v1/vpn)"
 assert_eq "GET loglevel"     "get_loglevel"         "$(route_request GET  /v1/services/xray/loglevel)"

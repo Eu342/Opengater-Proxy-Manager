@@ -13,3 +13,12 @@ put_routing() {
     *) http_error 500 routing_failed "routing save failed" ;;
   esac
 }
+# POST /v1/routing/apply — regenerate 05_routing from the saved model + restart xray (rollback on failure)
+post_routing_apply() {
+  _r="$(sh "$_OPM_ROUTING_SH" apply 2>/dev/null)"
+  case "$_r" in
+    *'"error"'*) http_error 400 routing_apply_error "$(printf '%s' "$_r" | jq -r '.error // "apply failed"' 2>/dev/null)" ;;
+    '{'*) http_ok "$_r" ;;
+    *) http_error 500 routing_apply_failed "routing apply failed" ;;
+  esac
+}
