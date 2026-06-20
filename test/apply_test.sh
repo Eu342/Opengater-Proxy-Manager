@@ -41,6 +41,25 @@ assert_json_eq "routing rolled back"   "$WORK/prev_routing.json"   "$(cat "$XKEE
 assert_json_eq "outbounds rolled back" "$WORK/prev_outbounds.json" "$(cat "$XKEEN_XRAY_CONFDIR/04_outbounds.json")"
 assert_eq "state intact after rollback" "2" "$(jq -r .schemaVersion "$XKEEN_STATE_PATH")"
 
+# Routing model in control: when routing.json exists AND a 05_routing.json is already
+# present (owned by routing-apply / POST /v1/routing/apply), state-apply must NOT
+# regenerate routing — only outbounds. Verified with a sentinel that gen_xray_routing
+# would never produce.
+export XKEEN_SELFTEST_CMD="true"
+printf '{"mode":"rf-direct","rules":[]}\n' > "$WORK/routing.json"
+export XKEEN_ROUTING_MODEL="$WORK/routing.json"
+printf '{"routing":{"domainStrategy":"AsIs","_owner":"routing-apply"}}\n' > "$XKEEN_XRAY_CONFDIR/05_routing.json"
+run_apply "$DIR/fixtures/state-v1.json" "$JOB"
+assert_eq "apply ok with routing model" "ok" "$(jq -r .status "$JOB")"
+assert_eq "routing preserved (not regenerated)" "routing-apply" "$(jq -r '.routing._owner' "$XKEEN_XRAY_CONFDIR/05_routing.json")"
+assert_eq "outbounds still regenerated" "vless-reality" "$(jq -r '.outbounds[0].tag' "$XKEEN_XRAY_CONFDIR/04_outbounds.json")"
+# Bootstrap: model present but routing file missing -> generate from STATE so xray
+# always has a valid routing config.
+rm -f "$XKEEN_XRAY_CONFDIR/05_routing.json"
+run_apply "$DIR/fixtures/state-v1.json" "$JOB"
+assert_eq "routing bootstrapped when missing" "IPIfNonMatch" "$(jq -r '.routing.domainStrategy' "$XKEEN_XRAY_CONFDIR/05_routing.json")"
+unset XKEEN_ROUTING_MODEL
+
 # Validation failure: state that won't validate -> failed, no crash.
 BAD="$WORK/bad.json"; printf '{"profiles":[]}' > "$BAD"
 export XKEEN_SELFTEST_CMD="true"

@@ -54,7 +54,19 @@ run_apply() {
   [ -f "$_rt" ]  && { cp "$_rt"  "$_brt"; _had_rt=1; }
   [ -f "$XKEEN_STATE_PATH" ] && { cp "$XKEEN_STATE_PATH" "$_bstate"; _had_state=1; }
 
-  if ! gen_xray_outbounds "$_norm" > "$_out" 2>/dev/null || ! gen_xray_routing "$_norm" > "$_rt" 2>/dev/null; then
+  # Outbounds are always regenerated from STATE. Routing is owned by the routing
+  # model (routing.json) once it exists: its 05_routing.json is written by the
+  # routing page's "Применить" (POST /v1/routing/apply), so state-apply must NOT
+  # clobber it. Generate routing from STATE only when no routing model exists yet,
+  # or the routing file is missing (first-run / legacy bootstrap so xray always has
+  # a valid 05_routing.json). XKEEN_ROUTING_MODEL is overridable for tests.
+  _rj="${XKEEN_ROUTING_MODEL:-${OPM_ROOT:-/opt/share/xkeen-manager}/routing.json}"
+  _gen_ok=1
+  gen_xray_outbounds "$_norm" > "$_out" 2>/dev/null || _gen_ok=0
+  if [ "$_gen_ok" = 1 ] && { [ ! -f "$_rj" ] || [ ! -f "$_rt" ]; }; then
+    gen_xray_routing "$_norm" > "$_rt" 2>/dev/null || _gen_ok=0
+  fi
+  if [ "$_gen_ok" = 0 ]; then
     if [ "$_had_out" = 1 ]; then cp "$_bout" "$_out"; else rm -f "$_out"; fi
     if [ "$_had_rt" = 1 ];  then cp "$_brt"  "$_rt";  else rm -f "$_rt";  fi
     _apply_job_write "$_job" failed "config generation failed"; rm -rf "$_tmpd"; return 1
