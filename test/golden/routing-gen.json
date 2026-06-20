@@ -1,0 +1,101 @@
+{
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": [
+          "proxy-relay-ss"
+        ],
+        "outboundTag": "vless-reality"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "domain": [
+          "ext:roscomvpn-geosite.dat:category-ru"
+        ],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "ip": [
+          "ext:roscomvpn-geoip.dat:direct"
+        ],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "domain": [
+          "full:exact.example.com"
+        ],
+        "outboundTag": "vless-reality"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "domain": [
+          "domain:ads.youtube.com"
+        ],
+        "outboundTag": "vless-reality"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "domain": [
+          "domain:gosuslugi.ru"
+        ],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "domain": [
+          "domain:youtube.com"
+        ],
+        "outboundTag": "vless-reality"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "ip": [
+          "1.2.3.0/24"
+        ],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "domain": [
+          "ext:roscomvpn-geosite.dat:category-geoblock-ru"
+        ],
+        "outboundTag": "vless-reality"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "outboundTag": "vless-reality"
+      }
+    ]
+  }
+}

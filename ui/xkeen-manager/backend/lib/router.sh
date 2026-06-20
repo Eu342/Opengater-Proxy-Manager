@@ -57,6 +57,8 @@ route_request() {
       case "$_m" in POST) echo post_geo_update ;; *) echo method_not_allowed ;; esac ;;
     /v1/geo/sources/*/remove)
       case "$_m" in POST) echo post_geo_remove ;; *) echo method_not_allowed ;; esac ;;
+    /v1/routing)
+      case "$_m" in GET) echo get_routing ;; PUT) echo put_routing ;; *) echo method_not_allowed ;; esac ;;
     /v1/subscription/*|/v1/cores/mihomo/*)
       echo stub_501 ;;
     *) echo not_found ;;

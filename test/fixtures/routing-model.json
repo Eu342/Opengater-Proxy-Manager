@@ -1,0 +1,8 @@
+{ "mode":"rf-direct", "rules":[
+  {"kind":"domain","value":"gosuslugi.ru","action":"direct"},
+  {"kind":"domain","value":"ads.youtube.com","action":"vpn"},
+  {"kind":"domain","value":"youtube.com","action":"vpn"},
+  {"kind":"geosite","category":"category-geoblock-ru","action":"vpn"},
+  {"kind":"ip","value":"1.2.3.0/24","action":"direct"},
+  {"kind":"domain","value":"exact.example.com","action":"vpn","match":"full"}
+] }

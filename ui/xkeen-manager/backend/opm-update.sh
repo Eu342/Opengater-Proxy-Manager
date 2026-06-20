@@ -134,16 +134,18 @@ cmd_apply() {
   [ -f "$SRC/ui-v2/preview/logo.png" ] && cp "$SRC/ui-v2/preview/logo.png" "$N/logo.png" 2>/dev/null
   cp "$B/api.cgi" "$B/xkeen-runtime.sh" "$B/xkeen-selfheal.sh" "$N/api/" 2>/dev/null
   [ -f "$B/opm-update.sh" ] && cp "$B/opm-update.sh" "$N/api/opm-update.sh"
+  [ -f "$B/opm-geo.sh" ] && cp "$B/opm-geo.sh" "$N/api/opm-geo.sh"
+  [ -f "$B/opm-routing.sh" ] && cp "$B/opm-routing.sh" "$N/api/opm-routing.sh"
   [ -f "$SRC/scripts/xkeen/opm-netfilter-hook.sh" ] && cp "$SRC/scripts/xkeen/opm-netfilter-hook.sh" "$N/api/opm-netfilter-hook.sh"
   cp "$B/lib/"*.sh "$N/api/lib/" 2>/dev/null
   cp "$B/lib/jq/"*.jq "$N/api/lib/jq/" 2>/dev/null
   cp "$B/lib/handlers/"*.sh "$N/api/lib/handlers/" 2>/dev/null
   printf '%s\n' "$(_ver_norm "$tag")" > "$N/VERSION"
   # carry user data forward (anything not shipped by the repo)
-  for keep in xkeen-ui-state.json subscription.json update-state.json update-status.json update-config.json geo.json logo.png httpd-auth.conf; do
+  for keep in xkeen-ui-state.json subscription.json update-state.json update-status.json update-config.json geo.json routing.json logo.png httpd-auth.conf; do
     [ -f "$ROOT/$keep" ] && [ ! -f "$N/$keep" ] && cp "$ROOT/$keep" "$N/$keep" 2>/dev/null
   done
-  chmod 755 "$N/api/api.cgi" "$N/api/xkeen-runtime.sh" "$N/api/xkeen-selfheal.sh" "$N/api/opm-update.sh" 2>/dev/null
+  chmod 755 "$N/api/api.cgi" "$N/api/xkeen-runtime.sh" "$N/api/xkeen-selfheal.sh" "$N/api/opm-update.sh" "$N/api/opm-geo.sh" "$N/api/opm-routing.sh" 2>/dev/null
   chmod 644 "$N/index.html" 2>/dev/null
 
   _status swapping "Applying"
