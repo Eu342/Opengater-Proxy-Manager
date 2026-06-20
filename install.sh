@@ -256,9 +256,11 @@ deploy_sources() {
   cp "$SRC_DIR/ui-v2/index.html" /opt/share/xkeen-manager/index.html
   [ -f "$SRC_DIR/ui-v2/preview/logo.png" ] && cp "$SRC_DIR/ui-v2/preview/logo.png" /opt/share/xkeen-manager/logo.png || true
   chmod 644 /opt/share/xkeen-manager/index.html 2>/dev/null || true
+  [ -f "$SRC_DIR/VERSION" ] && cp "$SRC_DIR/VERSION" /opt/share/xkeen-manager/VERSION || true
 
   log "Deploying backend (v2 /api/v1 + legacy)"
   deploy_file "$BACKEND/api.cgi"           /opt/share/xkeen-manager/api/api.cgi
+  [ -f "$BACKEND/opm-update.sh" ] && deploy_file "$BACKEND/opm-update.sh" /opt/share/xkeen-manager/api/opm-update.sh
   deploy_file "$BACKEND/routing.cgi"       /opt/share/xkeen-manager/api/routing.cgi
   deploy_file "$BACKEND/xkeen-selfheal.sh" /opt/share/xkeen-manager/api/xkeen-selfheal.sh
   deploy_file "$BACKEND/xkeen-runtime.sh"  /opt/share/xkeen-manager/api/xkeen-runtime.sh

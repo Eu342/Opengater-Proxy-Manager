@@ -118,6 +118,10 @@
   .svc{display:inline-flex;align-items:center;gap:5px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
   .dot.off{background:rgba(120,120,128,.5)}
+  .updot{width:9px;height:9px;border-radius:50%;background:var(--blue);flex:none;box-shadow:0 0 0 3px rgba(10,132,255,.18)}
+  .btn.sm{padding:8px 13px;font-size:12.5px;align-self:center;white-space:nowrap}
+  .relnotes{margin-top:12px;padding:11px 13px;background:rgba(118,118,128,.1);color:#474747;border-radius:11px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:170px;overflow:auto}
+  .dark .relnotes{background:rgba(118,118,128,.16);color:#c7c7cc}
   .dot.bad{background:var(--red)} .dot.warn{background:var(--amber)} .dot.wait{background:var(--faint)}
   .ld{display:inline-block;width:11px;height:11px;border:2px solid var(--faint);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite, fadein .25s ease;vertical-align:-1px}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -240,6 +244,7 @@ const API='/api/api.cgi/v1';
 const LOGO='data:image/png;base64,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';   // inlined 44x44 logo — never re-fetched, so it can't flicker on re-render
 let DEMO=false, STATE=null, SUB=loadSub(), POWER=true, CONNTS=null, UPTMR=null;
 let HEALTH={}, KSTACK={}, DASHTS=0, DASHBUSY=false, VPNPENDING=false, MOREOPEN=false, REFRESHING=false, CONNOPEN=false, DEVLIST=null, DEVTS=0, PINGING=false, PINGFADE=false, DEVFADE=false, SHEETOPEN=false, AUTHGONE=false;
+let UPD=null, UPDBUSY=false, UPDDOING=null, UPDARMED=false, UPDPOLL=null;
 let VCACHE=(function(){try{return JSON.parse(localStorage.getItem('opm_versions'))||null;}catch(e){return null;}})();
 let PINGCFG=(function(){try{return JSON.parse(localStorage.getItem('opg.ping'))||null;}catch(e){return null;}})()||{url:'https://www.gstatic.com/generate_204',proto:'proxy-get',display:'time'};
 if(!PINGCFG.display)PINGCFG.display='time';
@@ -430,7 +435,7 @@ function viewDashboard(h,k){
     <div class="rows">
       ${mrow('routing','Routing',(x.groups||[]).length+' groups · who goes through VPN','M4 7h16M4 12h16M4 17h10')}
       ${mrow('devices','Devices','Choose which devices use the VPN','M4 6h16v12H4zM9 21h6M12 18v3')}
-      ${mrow('settings','Settings','Core · IPv6 · FakeIP · policy','M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1zM15 12a3 3 0 1 0-6 0 3 3 0 1 0 6 0')}
+      ${mrow('settings','Settings','Core · IPv6 · FakeIP · policy','M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1zM15 12a3 3 0 1 0-6 0 3 3 0 1 0 6 0',UPD&&UPD.updateAvailable)}
     </div>
     <div class="foot" style="margin-top:auto;display:flex;gap:7px 18px;font-size:12px;color:var(--faint);padding:24px 4px 0">
       <span class="svc"><span class="dot ${!HL?'wait':(!POWER?'wait':(xUp?'':'bad'))}"></span> xray ${xv?fade(fV,esc(xv)):spin}</span>
@@ -448,7 +453,7 @@ function flagImg(e,sz){e=e||'🌐';var u='https://cdn.jsdelivr.net/gh/twitter/tw
 function flagErr(img){var e=img.getAttribute('data-e')||'🌐';var s=document.createElement('span');s.className='flag';s.textContent=e;if(img.parentNode)img.replaceWith(s);}
 function locRow(l,on,i){var pg=(PINGING&&l.address)?`<span class="ping" style="margin-left:auto"><span class="ld"></span></span>`:(l.ping?`<span class="ping ${PINGFADE?'fade':''}" style="margin-left:auto">${pingVal(l.ping)}</span>`:`<span class="ping" style="margin-left:auto"></span>`);return `<div class="loc ${on?'on':''}" onclick="applyLocation(${i})">${flagImg(l.flag)}
   <div><div class="nm">${esc(cleanName(l.name))}</div></div><span class="type ${l.type==='xhttp'?'xhttp':'reality'}">${esc(l.type||'reality')}</span><span class="check">✓</span>${pg}</div>`;}
-function mrow(h,t,d,p){return `<div class="card pad lrow" onclick="go('#${h}')"><span class="ic"><svg viewBox="0 0 24 24"><path d="${p}"/></svg></span><div><div class="t">${t}</div><div class="d">${esc(d)}</div></div><span class="chev2">›</span></div>`;}
+function mrow(h,t,d,p,badge){return `<div class="card pad lrow" onclick="go('#${h}')"><span class="ic"><svg viewBox="0 0 24 24"><path d="${p}"/></svg></span><div><div class="t">${t}</div><div class="d">${esc(d)}</div></div>${badge?'<span class="updot" style="margin-right:8px"></span>':''}<span class="chev2">›</span></div>`;}
 
 function viewSubscription(){const sub=SUB||{name:'',url:'',locations:[]};const has=sub.locations&&sub.locations.length;
   return shell('subscription',`
@@ -575,8 +580,31 @@ function viewSettings(){const ipv6=((STATE.settings||{}).ipv6Mode)||'reject';con
         <select id="xrlvl" style="width:auto" onchange="setLogLevel(this.value)">${['none','error','warning','info','debug'].map(l=>`<option value="${l}" ${l===XRLVL?'selected':''}>${l}</option>`).join('')}</select></div>
       <div class="it" style="cursor:pointer" onclick="go('#logs')"><div style="flex:1"><div class="k">Logs</div><div class="sub">xray · sing‑box · self‑heal · health</div></div><span class="chev2">›</span></div>
     </div>
+    <h2>Software Updates</h2>
+    ${updatesCard()}
     <h2>Policy</h2>
     <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Keenetic policy</div><div class="sub">Devices assigned here are managed by Opengater</div></div><span class="muted">Opengater Proxy Manager</span></div></div>`);
+}
+function updatesCard(){
+  if(UPDDOING){
+    var st=UPDDOING.state||'starting';
+    var lbl={starting:'Starting…',downloading:'Downloading…',validating:'Validating…',installing:'Installing…',swapping:'Applying…',restarting:'Restarting…',done:'Done',failed:'Failed'}[st]||st;
+    return `<div class="card pad"><div style="display:flex;align-items:center;gap:12px"><span class="ld"></span><div><div class="k">${esc(lbl)}</div><div class="sub">${esc(UPDDOING.message||'Updating — the panel will reload automatically')}</div></div></div></div>`;
+  }
+  var cur=(UPD&&UPD.current)||'—';
+  if(UPD&&UPD.updateAvailable){
+    var notes=(UPD.notes||'').trim();
+    return `<div class="card pad">
+      <div style="display:flex;align-items:center;gap:10px"><span class="updot"></span><div style="flex:1"><div class="k">Update available — v${esc(UPD.latest)}</div><div class="sub">You're on v${esc(cur)}</div></div></div>
+      ${notes?`<div class="relnotes">${esc(notes)}</div>`:''}
+      ${UPDARMED
+        ? `<div class="sub" style="margin:12px 0 8px">This downloads v${esc(UPD.latest)} and restarts the panel. If it fails it rolls back automatically.</div>
+           <div style="display:flex;gap:10px"><button class="btn" style="flex:1" onclick="applyUpdate()">Yes, update now</button><button class="btn ghost" style="flex:1" onclick="UPDARMED=false;render()">Cancel</button></div>`
+        : `<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" style="flex:1" onclick="UPDARMED=true;render()">Update now</button><button class="btn ghost" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check again'}</button></div>`}
+    </div>`;
+  }
+  return `<div class="card lst"><div class="it"><div style="flex:1"><div class="k">Version ${esc(cur)}</div><div class="sub">${UPD&&UPD.checkedAt?'On the latest version':'Tap to check for updates'}</div></div>
+    <button class="btn sec sm" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check for updates'}</button></div></div>`;
 }
 async function setCore(v){if(v==='mihomo'){toast('mihomo core is coming soon',true);render();return;}STATE.activeCore=v;if(!DEMO){const r=await apij('/core',{method:'PUT',body:JSON.stringify({core:v})});toast(r.ok?'Core: '+v:'Failed',!r.ok);}else toast('Core: '+v);}
 async function setIpv6(v){STATE.settings=Object.assign({},STATE.settings,{ipv6Mode:v});if(!DEMO){const r=await apij('/settings',{method:'PUT',body:JSON.stringify({ipv6Mode:v})});toast(r.ok?'IPv6: '+v:'Failed',!r.ok);}else toast('IPv6: '+v);}
@@ -584,6 +612,25 @@ async function loadSettings(){if(DEMO)return;try{const r=await apij('/services/x
 function setPingUrl(v){PINGCFG.url=(v||'').trim()||'https://www.gstatic.com/generate_204';localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));}
 function setPingProto(v){PINGCFG.proto=v;localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));toast('Ping protocol: '+v);}
 function setPingDisplay(v){PINGCFG.display=v;localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));toast(v==='bars'?'Ping shown as signal bars':'Ping shown as time');}
+/* ---------- software updates ---------- */
+async function loadUpdate(force){if(DEMO)return;if(force){UPDBUSY=true;render();}
+  try{const r=await apij('/update/check'+(force?'?force=1':''));if(r.ok&&r.body)UPD=r.body;}catch(e){}
+  UPDBUSY=false;if(force||(location.hash||'').indexOf('settings')>=0||(location.hash||'').indexOf('dashboard')>=0||!location.hash)render();}
+function checkUpdate(){loadUpdate(true);}
+async function applyUpdate(){if(!UPD||!UPD.updateAvailable)return;UPDARMED=false;var tag=UPD.tag||('v'+UPD.latest);
+  UPDDOING={state:'starting',message:'Starting update'};render();
+  try{const r=await apij('/update/apply',{method:'POST',body:JSON.stringify({tag:tag})});
+    if(!r.ok){UPDDOING=null;toast('Update could not start: '+((r.body&&r.body.detail)||r.status),true);render();return;}}
+  catch(e){UPDDOING=null;toast('Update could not start',true);render();return;}
+  pollUpdate(0);}
+function pollUpdate(elapsed){clearTimeout(UPDPOLL);
+  if(elapsed>150000){UPDDOING=null;toast('Update timed out — reload to verify',true);render();return;}
+  UPDPOLL=setTimeout(async function(){var st=null;
+    try{const r=await apij('/update/status');if(r.ok&&r.body)st=r.body;}catch(e){}   // server may be restarting — keep polling
+    if(st&&st.state){UPDDOING=st;render();
+      if(st.state==='done'){toast('Updated to v'+(st.version||(UPD&&UPD.latest)||''));setTimeout(function(){location.reload();},1600);return;}
+      if(st.state==='failed'){UPDDOING=null;toast(st.message||'Update failed',true);render();loadUpdate(true);return;}}
+    pollUpdate(elapsed+2000);},2000);}
 function applyTheme(){document.documentElement.classList.toggle('dark',THEME==='dark');}
 function setTheme(on){THEME=on?'dark':'light';try{localStorage.setItem('opg.theme',THEME);}catch(e){}applyTheme();}
 async function setLogLevel(v){const old=XRLVL;XRLVL=v;if(DEMO){toast('xray log level: '+v+' (demo)');return;}toast('Applying '+v+' — restarting xray…');const r=await apij('/services/xray/loglevel',{method:'PUT',body:JSON.stringify({level:v})});if(r.ok){toast('xray log level: '+v);}else{XRLVL=old;const s=$('#xrlvl');if(s)s.value=old;toast('Failed: '+((r.body&&r.body.detail)||r.status),true);}}
@@ -679,6 +726,8 @@ async function boot(){
   if(DEMO&&!SUB)SUB=JSON.parse(JSON.stringify(DEMO_SUB));
   if(!location.hash)location.hash='#dashboard';
   render();
+  LASTNAV=(location.hash||'#dashboard').slice(1);
+  loadUpdate(false);                                   // backend-cached check; lights the badge if an update is waiting
 }
 document.addEventListener('click',function(e){if(MOREOPEN&&!(e.target.closest&&e.target.closest('.more'))){MOREOPEN=false;render();}});
 boot();
