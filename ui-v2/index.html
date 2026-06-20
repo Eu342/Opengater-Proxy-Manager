@@ -617,14 +617,14 @@ function viewUpdate(){
         : `<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" style="flex:1" onclick="UPDARMED=true;render()">Update now</button><button class="btn ghost" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check again'}</button></div>`}
     </div>`+freqCard();
   } else {
-    inner=`<div class="card lst"><div class="it"><div style="flex:1"><div class="k">Version ${esc(cur)}</div><div class="sub">${UPD&&UPD.checkedAt?'On the latest version':'Tap to check for updates'}</div></div>
+    inner=`<div class="card lst" style="margin-top:20px"><div class="it"><div style="flex:1"><div class="k">Version ${esc(cur)}</div><div class="sub">${UPD&&UPD.checkedAt?'On the latest version':'Tap to check for updates'}</div></div>
       <button class="btn sec sm" onclick="checkUpdate()">${UPDBUSY?'<span class="ld"></span>':'Check for updates'}</button></div></div>`+freqCard();
   }
   return shell('update',inner);
 }
 function freqCard(){
   var iv=(UPD&&UPD.intervalSec)||86400;
-  return `<div class="card lst" style="margin-top:12px"><div class="it"><div style="flex:1"><div class="k">Check for updates</div><div class="sub">How often the router checks automatically</div></div>
+  return `<h2>Check for updates</h2><div class="card lst"><div class="it"><div style="flex:1"><div class="k">Frequency</div><div class="sub">How often the router checks automatically</div></div>
     <select style="width:auto" onchange="setUpdateInterval(this.value)">${[[86400,'Daily'],[604800,'Weekly'],[2592000,'Monthly']].map(o=>`<option value="${o[0]}" ${iv==o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div></div>`;
 }
 async function setUpdateInterval(v){var iv=parseInt(v,10)||86400;var nm={86400:'Daily',604800:'Weekly',2592000:'Monthly'}[iv]||'';if(UPD)UPD.intervalSec=iv;
