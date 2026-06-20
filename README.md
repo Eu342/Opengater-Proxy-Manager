@@ -154,4 +154,4 @@ You may install and run **unmodified** copies for your own **personal,
 non-commercial** use. Without written permission you may **not** modify, fork,
 copy, or republish the source (including under a different name or brand),
 redistribute it, or use it for any commercial purpose. Licensing inquiries:
-e@opengater.com
+mail@opengater.com
