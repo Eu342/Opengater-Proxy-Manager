@@ -126,6 +126,30 @@
   .upbar i{display:block;height:100%;width:0;background:var(--blue);border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1)}
   .upbar.ok i{background:var(--green)}
   .okmark{width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:none}
+  /* routing page */
+  .modecards{margin-bottom:4px}
+  .mc{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--line);border-radius:13px;padding:13px 15px;margin-bottom:9px;cursor:pointer;transition:border-color .15s,background .15s}
+  .mc.on{border-color:var(--blue);background:rgba(10,132,255,.05)}
+  .mct{font-weight:600;font-size:14px;line-height:1.25}
+  .mcs{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.3}
+  .mcchk{margin-left:auto;color:var(--blue);font-size:18px;opacity:0;flex:none}
+  .mc.on .mcchk{opacity:1}
+  .ric{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
+  .ric svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .ric.siteg{background:rgba(10,132,255,.1);color:var(--blue)}
+  .ric.ipg{background:rgba(48,193,78,.12);color:#1f9e3e}
+  .rx{flex:none;color:var(--faint);cursor:pointer;display:flex;align-items:center;margin-left:2px}
+  .rx svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+  .addrow{display:flex;align-items:center;gap:9px;padding:12px 15px;border-top:1px solid var(--line);color:var(--blue);font-weight:600;font-size:13.5px;cursor:pointer}
+  .addrow svg{width:18px;height:18px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round}
+  .tag{font-size:9.5px;font-weight:700;letter-spacing:.03em;padding:2px 6px;border-radius:5px;flex:none}
+  .tag.site{background:rgba(10,132,255,.12);color:var(--blue)} .tag.ip{background:rgba(48,193,78,.13);color:#1f9e3e}
+  h2.dir{color:#1f9e3e} h2.vpn{color:var(--blue)}
+  .rseg{display:flex;gap:3px;background:rgba(118,118,128,.12);border-radius:11px;padding:3px;margin:4px 0 12px}
+  .rseg button{flex:1;font:inherit;font-size:13px;font-weight:600;color:var(--muted);background:transparent;border:0;padding:9px;border-radius:8px;cursor:pointer}
+  .rseg button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .dark .rseg button.on{background:#3a3a3c}
+  .foot{font-size:12px;color:var(--muted);margin:14px 6px;line-height:1.5}
   .dot.bad{background:var(--red)} .dot.warn{background:var(--amber)} .dot.wait{background:var(--faint)}
   .ld{display:inline-block;width:11px;height:11px;border:2px solid var(--faint);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite, fadein .25s ease;vertical-align:-1px}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -249,6 +273,7 @@ const LOGO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAsCAYAAAAehFoBAA
 let DEMO=false, STATE=null, SUB=loadSub(), POWER=true, CONNTS=null, UPTMR=null;
 let HEALTH={}, KSTACK={}, DASHTS=0, DASHBUSY=false, VPNPENDING=false, MOREOPEN=false, REFRESHING=false, CONNOPEN=false, DEVLIST=null, DEVTS=0, PINGING=false, PINGFADE=false, DEVFADE=false, SHEETOPEN=false, AUTHGONE=false;
 let UPD=null, UPDBUSY=false, UPDDOING=null, UPDARMED=false, UPDPOLL=null;
+let ROUTING=null, GEOGROUPS=null, ROUTEBUSY=false, ROUTEDIRTY=false, ROUTELOADING=false, RSHEET=null;
 let VCACHE=(function(){try{return JSON.parse(localStorage.getItem('opm_versions'))||null;}catch(e){return null;}})();
 let PINGCFG=(function(){try{return JSON.parse(localStorage.getItem('opg.ping'))||null;}catch(e){return null;}})()||{url:'https://www.gstatic.com/generate_204',proto:'proxy-get',display:'time'};
 if(!PINGCFG.display)PINGCFG.display='time';
@@ -512,15 +537,56 @@ async function refreshSub(){if(!SUB||!SUB.url){toast('No subscription URL — op
 async function fetchSub(url){const r=await apij('/subscription/fetch',{method:'POST',body:JSON.stringify({url})});if(r.ok&&r.body&&typeof r.body.content==='string')return r.body.content;throw new Error((r.body&&r.body.detail)||('status '+(r.status||'?')));}
 async function importFromUrl(){/* re-import stored url; show locations fast, ping in background */ if(!SUB||!SUB.url){go('#subscription');return;} try{const locs=parseSubscription(await fetchSub(SUB.url));if(!locs.length){toast('No nodes',true);return;}SUB.locations=locs;SUB.updated='just now';saveSub();toast('Refreshed');render();measurePings(locs).then(function(){saveSub();});}catch(e){toast('Refresh failed: '+(e.message||e),true);go('#subscription');}}
 
-function viewRouting(){const x=activeXray();const g=x.groups||[];
-  return shell('routing',`<h2>Routing groups</h2>
-    <div class="card lst">${g.map(gr=>`<div class="it"><div style="flex:1"><div class="k">${esc(gr.name)}</div><div class="sub">${(gr.domains||[]).length} domains · ${(gr.cidrs||[]).length} cidr</div></div>
-      <span class="pill ${gr.outboundTag==='vless-reality'?'vpn':(gr.outboundTag==='direct'?'direct':'bypass')}">${gr.outboundTag==='vless-reality'?'VPN':gr.outboundTag}</span>
-      <label class="switch" style="margin-left:12px"><input type="checkbox" ${gr.enabled!==false?'checked':''} onchange="toggleGroup('${esc(gr.id)}',this.checked)"><span class="sl"></span></label></div>`).join('')||'<div class="empty">No groups</div>'}</div>
-    <div style="margin-top:14px"><button class="btn sec" onclick="toast('Group editor — next iteration')">+ Add group</button></div>
-    <p class="faint" style="font-size:13px;margin:14px 4px">Domains/CIDR editor per group comes next. Toggle routes a group through VPN (vless‑reality), direct, or bypass.</p>`);
+/* ---------- routing (geo groups + custom sites) ---------- */
+const RT_MODES=[['rf-direct','Россия напрямую, мир через VPN','Рос. сайты быстрые, остальное в обход'],['selective','Только выбранное через VPN','Остальное идёт напрямую'],['all-vpn','Весь интернет через VPN','Без исключений']];
+const GEOLABELS={'category-ru':'Российские сайты','category-geoblock-ru':'Заблокированное в РФ','category-ads':'Реклама','twitch-ads':'Реклама Twitch','youtube':'YouTube','telegram':'Telegram','twitch':'Twitch','steam':'Steam','apple':'Apple','google-play':'Google Play','google-deepmind':'Google DeepMind','github':'GitHub','microsoft':'Microsoft','torrent':'Торренты','whitelist':'Whitelist','private':'Локальная сеть','direct':'Россия (IP)','win-spy':'Телеметрия Windows','origin':'EA / Origin','riot':'Riot','epicgames':'Epic Games','escapefromtarkov':'Escape from Tarkov','faceit':'FACEIT','pinterest':'Pinterest'};
+function geoLabel(c){return GEOLABELS[c]||(c?c.charAt(0).toUpperCase()+c.slice(1):'?');}
+const RSVG={globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>',server:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><path d="M7 8h.01M7 16h.01"/></svg>',x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'};
+function ruleIsIp(r){return r.kind==='ip'||r.kind==='geoip';}
+function ruleLabel(r){return (r.kind==='domain'||r.kind==='ip')?esc(r.value):esc(geoLabel(r.category));}
+function ruleItem(r,i){var ip=ruleIsIp(r);var tag=(r.kind==='geosite')?'<span class="tag site">САЙТЫ</span>':(r.kind==='geoip')?'<span class="tag ip">IP</span>':'';var sub=(r.kind==='domain')?'свой сайт':(r.kind==='ip')?'свой IP / подсеть':'';return `<div class="it"><span class="ric ${ip?'ipg':'siteg'}">${ip?RSVG.server:RSVG.globe}</span><div class="grow"><div class="k">${ruleLabel(r)}</div>${sub?'<div class="d">'+sub+'</div>':''}</div>${tag}<span class="rx" onclick="removeRule(${i})">${RSVG.x}</span></div>`;}
+function normSite(s){s=(s||'').trim().toLowerCase().replace(/^[a-z]+:\/\//,'').replace(/[\/?#].*$/,'');if(!s)return null;
+  if(/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(s)||(s.indexOf(':')>=0&&/^[0-9a-f:]+(\/\d{1,3})?$/.test(s)))return {kind:'ip',value:s};
+  s=s.replace(/^\*?\.?/,'').replace(/^www\./,'');if(!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(s))return null;return {kind:'domain',value:s,match:'domain'};}
+function viewRouting(){
+  if(!ROUTING){loadRouting();return shell('routing','<div class="empty" style="padding:70px 20px"><span class="ld"></span></div>');}
+  var rules=ROUTING.rules||[];var dl=[],vl=[];rules.forEach(function(r,i){(r.action==='direct'?dl:vl).push([r,i]);});
+  function lc(items,b){return '<div class="card">'+items.map(function(p){return ruleItem(p[0],p[1]);}).join('')+'<div class="addrow" onclick="openRsheet(\''+b+'\')">'+RSVG.plus+'Добавить сайт или группу</div></div>';}
+  var footer = ROUTEBUSY ? '<button class="btn" style="margin-top:16px" disabled><span class="ld"></span> Применяется…</button>'
+    : (ROUTEDIRTY ? '<button class="btn" style="margin-top:16px" onclick="applyRouting()">Применить изменения</button>'
+       : '<p class="foot">Остальной трафик — по выбранному режиму. Изменения вступают в силу после «Применить».</p>');
+  return shell('routing',`
+    <div class="modecards">${RT_MODES.map(m=>`<div class="mc ${ROUTING.mode===m[0]?'on':''}" onclick="setRouteMode('${m[0]}')"><div class="grow"><div class="mct">${m[1]}</div><div class="mcs">${m[2]}</div></div><span class="mcchk">✓</span></div>`).join('')}</div>
+    <div class="h2 dir">ВСЕГДА НАПРЯМУЮ</div>${lc(dl,'direct')}
+    <div class="h2 vpn">ВСЕГДА ЧЕРЕЗ VPN</div>${lc(vl,'vpn')}
+    ${footer}
+    ${rsheet()}`);
 }
-async function toggleGroup(id,on){const x=activeXray();const gr=(x.groups||[]).find(g=>g.id===id);if(gr){gr.enabled=on;await pushAndApply('Routing updated');}}
+function rsheet(){var s=RSHEET||{tab:'site'};var groups=GEOGROUPS||[];
+  return `<div class="sheet-ov" id="rsheet">
+    <div class="sheet-bg" onclick="closeRsheet()"></div>
+    <div class="sheet">
+      <div class="sheet-grab"></div>
+      <h3>Добавить ${s.bucket==='vpn'?'через VPN':'напрямую'}</h3>
+      <div class="rseg"><button class="${s.tab!=='group'?'on':''}" onclick="rtab('site')">Свой сайт</button><button class="${s.tab==='group'?'on':''}" onclick="rtab('group')">Группа</button></div>
+      ${s.tab==='group'
+        ? `<div class="card lst" style="max-height:46vh;overflow:auto">${groups.length?groups.map(g=>`<div class="it" style="cursor:pointer" onclick="addGroupRule('${g.kind}','${esc(g.category)}')"><span class="ric ${g.kind==='ip'?'ipg':'siteg'}">${g.kind==='ip'?RSVG.server:RSVG.globe}</span><div class="grow"><div class="k">${esc(geoLabel(g.category))}</div><div class="d">${g.kind==='ip'?'geoip':'geosite'} · ${esc(g.category)}</div></div><span class="tag ${g.kind==='ip'?'ip':'site'}">${g.kind==='ip'?'IP':'САЙТЫ'}</span></div>`).join(''):'<div class="empty">Нет групп</div>'}</div>`
+        : `<input id="rinput" placeholder="youtube.com или 1.2.3.0/24" onkeydown="if(event.key==='Enter')addSiteRule()"><button class="btn" style="width:100%;margin-top:12px" onclick="addSiteRule()">Добавить</button>`}
+    </div>
+  </div>`;}
+async function loadRouting(){if(ROUTELOADING)return;ROUTELOADING=true;
+  if(DEMO){ROUTING={mode:'rf-direct',rules:[{kind:'geosite',category:'youtube',action:'vpn'},{kind:'domain',value:'gosuslugi.ru',action:'direct'}]};GEOGROUPS=[{kind:'site',category:'category-ru'},{kind:'ip',category:'direct'},{kind:'site',category:'youtube'},{kind:'site',category:'telegram'},{kind:'site',category:'category-ads'}];ROUTELOADING=false;render();return;}
+  try{const r=await apij('/routing');if(r.ok&&r.body)ROUTING=r.body;const g=await apij('/geo/groups');if(g.ok&&g.body)GEOGROUPS=g.body;}catch(e){}
+  if(!ROUTING)ROUTING={mode:'rf-direct',rules:[]};ROUTELOADING=false;render();}
+function setRouteMode(m){if(!ROUTING||ROUTING.mode===m)return;ROUTING.mode=m;ROUTEDIRTY=true;persistRouting();render();}
+function removeRule(i){ROUTING.rules.splice(i,1);ROUTEDIRTY=true;persistRouting();render();}
+function addSiteRule(){var el=$('#rinput');var n=normSite(el?el.value:'');if(!n){toast('Введите домен или IP',true);return;}ROUTING.rules.push(Object.assign({},n,{action:RSHEET.bucket}));ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Добавлено');}
+function addGroupRule(kind,cat){ROUTING.rules.push({kind:(kind==='ip'?'geoip':'geosite'),category:cat,action:RSHEET.bucket});ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Группа добавлена');}
+async function persistRouting(){if(DEMO)return;try{await apij('/routing',{method:'PUT',body:JSON.stringify({mode:ROUTING.mode,rules:ROUTING.rules})});}catch(e){}}
+async function applyRouting(){if(DEMO){ROUTEDIRTY=false;toast('Применено (demo)');render();return;}ROUTEBUSY=true;render();var ok=false;try{const r=await apij('/routing/apply',{method:'POST'});ok=r.ok;}catch(e){}ROUTEBUSY=false;if(ok){ROUTEDIRTY=false;toast('Маршрутизация обновлена');}else{toast('Не удалось применить — откат',true);}render();}
+function openRsheet(b){RSHEET={bucket:b,tab:'site'};render();requestAnimationFrame(function(){var e=$('#rsheet');if(e)e.classList.add('open');});}
+function rtab(t){if(RSHEET)RSHEET.tab=t;render();var e=$('#rsheet');if(e)e.classList.add('open');}
+function closeRsheet(){var e=$('#rsheet');if(e)e.classList.remove('open');setTimeout(function(){RSHEET=null;render();},280);}
 
 function devCard(){return '<div class="card">'+(DEVLIST?(DEVLIST.length?devRows(DEVLIST):'<div class="empty">No devices found</div>'):'<div class="empty"><span class="ld"></span></div>')+'</div>';}
 function viewDevices(){return shell('devices',`<h2>Devices on this network</h2>
