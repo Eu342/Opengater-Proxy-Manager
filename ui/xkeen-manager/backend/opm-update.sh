@@ -159,7 +159,13 @@ cmd_apply() {
   [ -x /opt/etc/init.d/S26opm ] && /opt/etc/init.d/S26opm restart >/dev/null 2>&1 || true
 
   if _health_ok; then
-    _status done "Updated to $(_ver_norm "$tag")" "$(_ver_norm "$tag")"
+    nv="$(_ver_norm "$tag")"
+    # refresh the cached check so the UI reflects the new version immediately
+    # (the carried-over state still said "update available" -> stale until forced).
+    "$JQ" -n --arg c "$nv" --arg tg "v$nv" --argjson t "$(_now)" --argjson iv "$(_interval)" \
+      '{current:$c,latest:$c,tag:$tg,updateAvailable:false,notes:"",htmlUrl:"",checkedAt:$t,intervalSec:$iv}' \
+      > "$STATE" 2>/dev/null || true
+    _status done "Updated to $nv" "$nv"
     rm -rf "$ROOT.bak"
     exit 0
   fi
