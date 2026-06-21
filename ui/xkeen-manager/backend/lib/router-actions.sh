@@ -21,8 +21,15 @@ opm_restart_xray() {
   XRAY_LOCATION_CONFDIR="${XKEEN_XRAY_CONFDIR:-/opt/etc/xray/configs}" \
     /opt/sbin/start-stop-daemon -S -b -m -p /opt/var/run/xray-ui.pid -x /opt/sbin/xray -- run \
     >>/opt/var/log/xray-manual.log 2>&1
-  sleep 3
-  netstat -lnptu 2>/dev/null | grep -q ':61219 '
+  # Poll for the redirect inbound to come up rather than a fixed sleep: with more geo
+  # categories referenced, xray needs longer to read the .dat files (USB) before it
+  # listens. A single short check here caused false "did not come back up" rollbacks.
+  _i=0
+  while [ "$_i" -lt 20 ]; do
+    netstat -lnptu 2>/dev/null | grep -q ':61219 ' && return 0
+    sleep 1; _i=$((_i+1))
+  done
+  return 1
 }
 
 # Rebuild the iptables/ipset runtime (xkeen chains + bypass/udp-route sets) from the new state.
