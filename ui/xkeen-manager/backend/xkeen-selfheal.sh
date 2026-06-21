@@ -604,6 +604,16 @@ repair_runtime() {
     fi
   fi
 
+  # Invariant (xkeen-runtime.sh): xray AND the sing-box UDP relay run whenever the VPN is
+  # on. The tproxy branch above only restarts sing-box when the UDP route is populated, so
+  # with UDP routing unconfigured sing-box would never come up (and never starts at boot
+  # via this watchdog). Keep it alive unconditionally here. pidof guards against a restart
+  # loop once it is up.
+  if [ -x "$SING_BOX_BIN" ] && [ -f "$SING_BOX_CONF" ] && ! pidof sing-box >/dev/null 2>&1; then
+    log "sing-box start needed"
+    restart_singbox
+  fi
+
   capture_health_metrics
   maybe_log_health
 
