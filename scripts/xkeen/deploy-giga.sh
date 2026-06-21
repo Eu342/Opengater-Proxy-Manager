@@ -37,6 +37,7 @@ cp "$ROOT/ui/xkeen-manager/backend/opm-geo.sh"          "$stage/api/opm-geo.sh"
 cp "$ROOT/ui/xkeen-manager/backend/opm-routing.sh"     "$stage/api/opm-routing.sh"
 cp "$ROOT/ui/xkeen-manager/backend/xkeen-runtime.sh"    "$stage/api/xkeen-runtime.sh"
 cp "$ROOT/ui/xkeen-manager/backend/xkeen-selfheal.sh"   "$stage/api/xkeen-selfheal.sh"
+cp "$ROOT/scripts/xkeen/opm-selfheal-loop.sh"           "$stage/api/xkeen-selfheal-loop.sh"
 cp "$ROOT/scripts/xkeen/opm-netfilter-hook.sh"          "$stage/api/opm-netfilter-hook.sh"
 cp "$ROOT/ui/xkeen-manager/backend/lib/"*.sh            "$stage/api/lib/"
 cp "$ROOT/ui/xkeen-manager/backend/lib/jq/"*.jq         "$stage/api/lib/jq/"
@@ -48,7 +49,7 @@ rsh 'echo connected; uname -m; [ -d /opt/share/xkeen-manager ] && echo "Opengate
 echo "==> pushing $(cd "$stage" && find . -type f | wc -l | tr -d " ") files via tar pipe"
 rsh "mkdir -p $DEST/api/lib/jq $DEST/api/lib/handlers; [ -f $DEST/index.html ] && cp $DEST/index.html $DEST/index.html.opg-bak 2>/dev/null || true"
 ( cd "$stage" && tar czf - . ) | sshpass -p "$PW" ssh $SSHO "$U@$H" \
-  "cd $DEST && /opt/bin/tar xzf - && chmod 755 api/api.cgi api/xkeen-runtime.sh api/xkeen-selfheal.sh api/opm-update.sh api/opm-geo.sh api/opm-routing.sh \
+  "cd $DEST && /opt/bin/tar xzf - && chmod 755 api/api.cgi api/xkeen-runtime.sh api/xkeen-selfheal.sh api/xkeen-selfheal-loop.sh api/opm-update.sh api/opm-geo.sh api/opm-routing.sh \
    && mkdir -p /opt/etc/ndm/netfilter.d \
    && cp api/opm-netfilter-hook.sh /opt/etc/ndm/netfilter.d/100-opm.sh && chmod 755 /opt/etc/ndm/netfilter.d/100-opm.sh \
    && chmod 644 index.html && echo extracted"

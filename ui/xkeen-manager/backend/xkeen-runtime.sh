@@ -14,6 +14,7 @@ PATH="/opt/bin:/opt/sbin:/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 : "${XKEEN_UDP_TABLE:=111}"
 : "${XKEEN_TPROXY_PORT:=61221}"
 : "${XKEEN_REDIRECT_PORT:=61219}"
+: "${OPM_ROUTING_MODEL:=/opt/share/xkeen-manager/routing.json}"
 
 XKEEN_MARK="${XKEEN_MARK:-}"
 
@@ -274,22 +275,43 @@ xkeen_ensure_tproxy_module() {
   iptables -t mangle -X xkeen_tproxy_probe 2>/dev/null || true
 }
 
+# Does the active routing model send "everything else" to the VPN? Only then is wholesale
+# UDP tunneling correct (rf-direct / all-vpn). For selective/all-direct the catch-all is
+# direct, so marked UDP must stay direct too. (No model -> legacy, no wholesale UDP tunnel.)
+xkeen_routing_catchall_vpn() {
+  xkeen_has_cmd jq || return 1
+  [ -f "$OPM_ROUTING_MODEL" ] || return 1
+  case "$(jq -r '.mode // ""' "$OPM_ROUTING_MODEL" 2>/dev/null)" in
+    rf-direct|all-vpn) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Full UDP tunnel. When the routing catch-all is the VPN, TPROXY ALL marked UDP into
+# sing-box (:61221 -> SS relay -> vless), mirroring the TCP REDIRECT. This closes the
+# HTTP/3 (QUIC, UDP:443) leak that let geo-blocked sites see the real ISP IP. Private/LAN
+# is excluded (sing-box also bypasses private as a backstop). Per-destination UDP for
+# selective mode is a future refinement.
 xkeen_apply_udp_route() {
-  if ! xkeen_udp_config_enabled; then
+  if ! xkeen_routing_catchall_vpn; then
     xkeen_cleanup_udp_route
     return 0
   fi
 
-  xkeen_build_udp_route_ipset || return 1
-  if ! xkeen_ipset_has_members "$XKEEN_UDP_ROUTE_SET"; then
-    xkeen_cleanup_udp_route
-    return 0
-  fi
+  [ -n "$XKEEN_MARK" ] || XKEEN_MARK="$(xkeen_get_mark)"
+  [ -n "$XKEEN_MARK" ] || { xkeen_cleanup_udp_route; return 1; }
+  xkeen_ensure_tproxy_module || { xkeen_cleanup_udp_route; return 1; }
 
-  xkeen_ensure_tproxy_module || return 1
   iptables -t mangle -N xkeen_udp_route 2>/dev/null || true
   iptables -t mangle -F xkeen_udp_route 2>/dev/null || true
-  iptables -t mangle -A xkeen_udp_route -p udp -j TPROXY --on-port "$XKEEN_TPROXY_PORT" --tproxy-mark "$XKEEN_UDP_MARK/$XKEEN_UDP_MARK" 2>/dev/null || return 1
+  # Never tproxy LAN / multicast / broadcast / loopback — let it route normally (direct).
+  iptables -t mangle -A xkeen_udp_route -d 224.0.0.0/4 -j RETURN 2>/dev/null || true
+  iptables -t mangle -A xkeen_udp_route -d 255.255.255.255/32 -j RETURN 2>/dev/null || true
+  iptables -t mangle -A xkeen_udp_route -d 127.0.0.0/8 -j RETURN 2>/dev/null || true
+  iptables -t mangle -A xkeen_udp_route -d 10.0.0.0/8 -j RETURN 2>/dev/null || true
+  iptables -t mangle -A xkeen_udp_route -d 172.16.0.0/12 -j RETURN 2>/dev/null || true
+  iptables -t mangle -A xkeen_udp_route -d 192.168.0.0/16 -j RETURN 2>/dev/null || true
+  iptables -t mangle -A xkeen_udp_route -p udp -j TPROXY --on-port "$XKEEN_TPROXY_PORT" --tproxy-mark "$XKEEN_UDP_MARK/$XKEEN_UDP_MARK" 2>/dev/null || { xkeen_cleanup_udp_route; return 1; }
 
   while ip rule show | grep -qE "fwmark $XKEEN_UDP_MARK(/$XKEEN_UDP_MARK)? (lookup|table) $XKEEN_UDP_TABLE"; do
     ip rule del fwmark "$XKEEN_UDP_MARK/$XKEEN_UDP_MARK" table "$XKEEN_UDP_TABLE" 2>/dev/null \
@@ -301,8 +323,10 @@ xkeen_apply_udp_route() {
   ip rule add fwmark "$XKEEN_UDP_MARK/$XKEEN_UDP_MARK" table "$XKEEN_UDP_TABLE" 2>/dev/null || true
   ip route replace local 0.0.0.0/0 dev lo table "$XKEEN_UDP_TABLE" 2>/dev/null || true
 
+  # Marked UDP -> tproxy chain, except destinations in the direct/bypass set.
   xkeen_delete_jumps mangle PREROUTING xkeen_udp_route
-  iptables -t mangle -A PREROUTING -m connmark --mark "0x$XKEEN_MARK" -m conntrack ! --ctstate INVALID -p udp -m set --match-set "$XKEEN_UDP_ROUTE_SET" dst -j xkeen_udp_route
+  iptables -t mangle -A PREROUTING -m connmark --mark "0x$XKEEN_MARK" -m conntrack ! --ctstate INVALID -p udp -m set ! --match-set "$XKEEN_BYPASS_SET" dst -j xkeen_udp_route 2>/dev/null \
+    || iptables -t mangle -A PREROUTING -m connmark --mark "0x$XKEEN_MARK" -m conntrack ! --ctstate INVALID -p udp -j xkeen_udp_route 2>/dev/null || true
 }
 
 xkeen_append_local_returns() {

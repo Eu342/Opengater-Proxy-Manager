@@ -137,6 +137,9 @@ cmd_apply() {
   [ -f "$B/opm-geo.sh" ] && cp "$B/opm-geo.sh" "$N/api/opm-geo.sh"
   [ -f "$B/opm-routing.sh" ] && cp "$B/opm-routing.sh" "$N/api/opm-routing.sh"
   [ -f "$SRC/scripts/xkeen/opm-netfilter-hook.sh" ] && cp "$SRC/scripts/xkeen/opm-netfilter-hook.sh" "$N/api/opm-netfilter-hook.sh"
+  # self-heal loop lives in scripts/ in the repo but is deployed into api/ (install.sh); the
+  # api/** swap would otherwise drop it and leave the watchdog with no script to run on reboot.
+  [ -f "$SRC/scripts/xkeen/opm-selfheal-loop.sh" ] && cp "$SRC/scripts/xkeen/opm-selfheal-loop.sh" "$N/api/xkeen-selfheal-loop.sh"
   cp "$B/lib/"*.sh "$N/api/lib/" 2>/dev/null
   cp "$B/lib/jq/"*.jq "$N/api/lib/jq/" 2>/dev/null
   cp "$B/lib/handlers/"*.sh "$N/api/lib/handlers/" 2>/dev/null
@@ -145,7 +148,7 @@ cmd_apply() {
   for keep in xkeen-ui-state.json subscription.json update-state.json update-status.json update-config.json geo.json routing.json logo.png httpd-auth.conf; do
     [ -f "$ROOT/$keep" ] && [ ! -f "$N/$keep" ] && cp "$ROOT/$keep" "$N/$keep" 2>/dev/null
   done
-  chmod 755 "$N/api/api.cgi" "$N/api/xkeen-runtime.sh" "$N/api/xkeen-selfheal.sh" "$N/api/opm-update.sh" "$N/api/opm-geo.sh" "$N/api/opm-routing.sh" 2>/dev/null
+  chmod 755 "$N/api/api.cgi" "$N/api/xkeen-runtime.sh" "$N/api/xkeen-selfheal.sh" "$N/api/xkeen-selfheal-loop.sh" "$N/api/opm-update.sh" "$N/api/opm-geo.sh" "$N/api/opm-routing.sh" 2>/dev/null
   chmod 644 "$N/index.html" 2>/dev/null
 
   _status swapping "Applying"
