@@ -134,6 +134,11 @@
   .mcs{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.3}
   .mcchk{margin-left:auto;color:var(--blue);font-size:18px;opacity:0;flex:none}
   .mc.on .mcchk{opacity:1}
+  /* current-mode card on the routing screen (tap -> #rmode) */
+  .modecard{display:flex;align-items:center;gap:13px;padding:15px;margin-top:20px;cursor:pointer}
+  .ric.modeic{width:42px;height:42px;border-radius:11px;background:rgba(10,132,255,.1);color:var(--blue)}
+  .ric.modeic svg{width:23px;height:23px}
+  .chev2{color:var(--faint);font-size:20px;flex:none}
   .ric{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
   .ric svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .ric.siteg{background:rgba(10,132,255,.1);color:var(--blue)}
@@ -144,12 +149,14 @@
   .addrow svg{width:18px;height:18px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round}
   .tag{font-size:9.5px;font-weight:700;letter-spacing:.03em;padding:2px 6px;border-radius:5px;flex:none}
   .tag.site{background:rgba(10,132,255,.12);color:var(--blue)} .tag.ip{background:rgba(48,193,78,.13);color:#1f9e3e}
+  h2.dir,h2.vpn{display:flex;align-items:center;gap:6px}
   h2.dir{color:#1f9e3e} h2.vpn{color:var(--blue)}
+  h2.dir svg,h2.vpn svg{width:15px;height:15px;fill:currentColor;stroke:none}
   .rseg{display:flex;gap:3px;background:rgba(118,118,128,.12);border-radius:11px;padding:3px;margin:4px 0 12px}
   .rseg button{flex:1;font:inherit;font-size:13px;font-weight:600;color:var(--muted);background:transparent;border:0;padding:9px;border-radius:8px;cursor:pointer}
   .rseg button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
   .dark .rseg button.on{background:#3a3a3c}
-  .foot{font-size:12px;color:var(--muted);margin:14px 6px;line-height:1.5}
+  .foot{font-size:12px;color:var(--muted);margin:20px 4px 14px;line-height:1.5}
   /* geo-files page */
   .geoit{gap:6px}
   .geosel{display:flex;align-items:center;gap:11px;cursor:pointer;min-width:0}
@@ -161,7 +168,7 @@
   .gbtn:active{background:rgba(118,118,128,.14)}
   .gbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .gbtn.del{color:var(--faint)} .gbtn.del:active{background:rgba(255,59,48,.12);color:#ff3b30}
-  .gtagb{font-size:9.5px;font-weight:700;letter-spacing:.02em;color:var(--faint);background:rgba(118,118,128,.14);padding:2px 6px;border-radius:5px;vertical-align:1px;margin-left:4px}
+  .gtagb{font-size:9.5px;font-weight:700;letter-spacing:.02em;color:var(--faint);background:rgba(118,118,128,.14);padding:2px 6px;border-radius:5px;vertical-align:1px;margin-left:4px;white-space:nowrap}
   .dot.bad{background:var(--red)} .dot.warn{background:var(--amber)} .dot.wait{background:var(--faint)}
   .ld{display:inline-block;width:11px;height:11px;border:2px solid var(--faint);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite, fadein .25s ease;vertical-align:-1px}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -388,8 +395,8 @@ async function pushAndApply(okMsg){
 }
 
 /* ---------- router ---------- */
-const TABS=[['dashboard','Home'],['subscription','Subscriptions'],['routing','Routing'],['devices','Devices'],['logs','Logs'],['settings','Settings'],['ping','Ping'],['update','Software Updates'],['geo','Геофайлы']];
-const PARENT={logs:'settings',ping:'settings',update:'settings',geo:'settings'};
+const TABS=[['dashboard','Home'],['subscription','Subscriptions'],['routing','Routing'],['devices','Devices'],['logs','Logs'],['settings','Settings'],['ping','Ping'],['update','Software Updates'],['geo','Geo files'],['rmode','Routing mode']];
+const PARENT={logs:'settings',ping:'settings',update:'settings',geo:'settings',rmode:'routing'};
 function go(h){location.hash=h;}
 let LASTNAV=(location.hash||'#dashboard').slice(1), NAVANIM=false, NAVDONE=null, NAVTMR=null;
 function navDepth(h){ if(!h||h==='dashboard')return 0; return PARENT[h]?2:1; }
@@ -551,52 +558,62 @@ async function fetchSub(url){const r=await apij('/subscription/fetch',{method:'P
 async function importFromUrl(){/* re-import stored url; show locations fast, ping in background */ if(!SUB||!SUB.url){go('#subscription');return;} try{const locs=parseSubscription(await fetchSub(SUB.url));if(!locs.length){toast('No nodes',true);return;}SUB.locations=locs;SUB.updated='just now';saveSub();toast('Refreshed');render();measurePings(locs).then(function(){saveSub();});}catch(e){toast('Refresh failed: '+(e.message||e),true);go('#subscription');}}
 
 /* ---------- routing (geo groups + custom sites) ---------- */
-const RT_MODES=[['rf-direct','Россия напрямую, мир через VPN','Рос. сайты быстрые, остальное в обход'],['selective','Только выбранное через VPN','Остальное идёт напрямую'],['all-vpn','Весь интернет через VPN','Без исключений']];
-const GEOLABELS={'category-ru':'Российские сайты','category-geoblock-ru':'Заблокированное в РФ','category-ads':'Реклама','twitch-ads':'Реклама Twitch','youtube':'YouTube','telegram':'Telegram','twitch':'Twitch','steam':'Steam','apple':'Apple','google-play':'Google Play','google-deepmind':'Google DeepMind','github':'GitHub','microsoft':'Microsoft','torrent':'Торренты','whitelist':'Whitelist','private':'Локальная сеть','direct':'Россия (IP)','win-spy':'Телеметрия Windows','origin':'EA / Origin','riot':'Riot','epicgames':'Epic Games','escapefromtarkov':'Escape from Tarkov','faceit':'FACEIT','pinterest':'Pinterest'};
+const RT_MODES=[['rf-direct','Russia direct, world via VPN','Russian sites stay fast, the rest is tunneled'],['selective','Only selected via VPN','Everything else goes direct'],['all-vpn','Everything via VPN','No exceptions']];
+const GEOLABELS={'category-ru':'Russian sites','category-geoblock-ru':'Blocked in Russia','category-ads':'Ads','twitch-ads':'Twitch ads','youtube':'YouTube','telegram':'Telegram','twitch':'Twitch','steam':'Steam','apple':'Apple','google-play':'Google Play','google-deepmind':'Google DeepMind','github':'GitHub','microsoft':'Microsoft','torrent':'Torrents','whitelist':'Whitelist','private':'Local network','direct':'Russia (IP)','win-spy':'Windows telemetry','origin':'EA / Origin','riot':'Riot','epicgames':'Epic Games','escapefromtarkov':'Escape from Tarkov','faceit':'FACEIT','pinterest':'Pinterest'};
 function geoLabel(c){return GEOLABELS[c]||(c?c.charAt(0).toUpperCase()+c.slice(1):'?');}
-const RSVG={globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>',server:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><path d="M7 8h.01M7 16h.01"/></svg>',x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',refresh:'<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg>',trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>'};
+const RSVG={globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>',server:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><path d="M7 8h.01M7 16h.01"/></svg>',x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',refresh:'<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg>',trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>',shield:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/></svg>',bolt:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2L4.5 13.5H10l-1 8.5L19.5 10H13z"/></svg>'};
 function ruleIsIp(r){return r.kind==='ip'||r.kind==='geoip';}
 function ruleLabel(r){return (r.kind==='domain'||r.kind==='ip')?esc(r.value):esc(geoLabel(r.category));}
-function ruleItem(r,i){var ip=ruleIsIp(r);var tag=(r.kind==='geosite')?'<span class="tag site">САЙТЫ</span>':(r.kind==='geoip')?'<span class="tag ip">IP</span>':'';var sub=(r.kind==='domain')?'свой сайт':(r.kind==='ip')?'свой IP / подсеть':'';return `<div class="it"><span class="ric ${ip?'ipg':'siteg'}">${ip?RSVG.server:RSVG.globe}</span><div class="grow"><div class="k">${ruleLabel(r)}</div>${sub?'<div class="d">'+sub+'</div>':''}</div>${tag}<span class="rx" onclick="removeRule(${i})">${RSVG.x}</span></div>`;}
+function ruleItem(r,i){var ip=ruleIsIp(r);var tag=(r.kind==='geosite')?'<span class="tag site">SITES</span>':(r.kind==='geoip')?'<span class="tag ip">IP</span>':'';var sub=(r.kind==='domain')?'custom site':(r.kind==='ip')?'custom IP / subnet':'';return `<div class="it"><span class="ric ${ip?'ipg':'siteg'}">${ip?RSVG.server:RSVG.globe}</span><div class="grow"><div class="k">${ruleLabel(r)}</div>${sub?'<div class="d">'+sub+'</div>':''}</div>${tag}<span class="rx" onclick="removeRule(${i})">${RSVG.x}</span></div>`;}
 function normSite(s){s=(s||'').trim().toLowerCase().replace(/^[a-z]+:\/\//,'').replace(/[\/?#].*$/,'');if(!s)return null;
   if(/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(s)||(s.indexOf(':')>=0&&/^[0-9a-f:]+(\/\d{1,3})?$/.test(s)))return {kind:'ip',value:s};
   s=s.replace(/^\*?\.?/,'').replace(/^www\./,'');if(!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(s))return null;return {kind:'domain',value:s,match:'domain'};}
+function curMode(){var m=(ROUTING&&ROUTING.mode)||'rf-direct';return RT_MODES.find(function(x){return x[0]===m;})||RT_MODES[0];}
 function viewRouting(){
   if(!ROUTING){loadRouting();return shell('routing','<div class="empty" style="padding:70px 20px"><span class="ld"></span></div>');}
   var rules=ROUTING.rules||[];var dl=[],vl=[];rules.forEach(function(r,i){(r.action==='direct'?dl:vl).push([r,i]);});
-  function lc(items,b){return '<div class="card">'+items.map(function(p){return ruleItem(p[0],p[1]);}).join('')+'<div class="addrow" onclick="openRsheet(\''+b+'\')">'+RSVG.plus+'Добавить сайт или группу</div></div>';}
-  var footer = ROUTEBUSY ? '<button class="btn" style="margin-top:16px" disabled><span class="ld"></span> Применяется…</button>'
-    : (ROUTEDIRTY ? '<button class="btn" style="margin-top:16px" onclick="applyRouting()">Применить изменения</button>'
-       : '<p class="foot">Остальной трафик — по выбранному режиму. Изменения вступают в силу после «Применить».</p>');
+  function lc(items,b){return '<div class="card lst">'+items.map(function(p){return ruleItem(p[0],p[1]);}).join('')+'<div class="addrow" onclick="openRsheet(\''+b+'\')">'+RSVG.plus+'Add site or group</div></div>';}
+  var m=curMode();
+  var apply = ROUTEBUSY ? '<button class="btn" style="margin-top:6px" disabled><span class="ld"></span> Applying…</button>'
+    : (ROUTEDIRTY ? '<button class="btn" style="margin-top:6px" onclick="applyRouting()">Apply changes</button>' : '');
   return shell('routing',`
-    <div class="modecards">${RT_MODES.map(m=>`<div class="mc ${ROUTING.mode===m[0]?'on':''}" onclick="setRouteMode('${m[0]}')"><div class="grow"><div class="mct">${m[1]}</div><div class="mcs">${m[2]}</div></div><span class="mcchk">✓</span></div>`).join('')}</div>
-    <div class="h2 dir">ВСЕГДА НАПРЯМУЮ</div>${lc(dl,'direct')}
-    <div class="h2 vpn">ВСЕГДА ЧЕРЕЗ VPN</div>${lc(vl,'vpn')}
-    ${footer}
+    <div class="card modecard" onclick="go('#rmode')">
+      <span class="ric modeic">${RSVG.shield}</span>
+      <div class="grow"><div class="mct">${m[1]}</div><div class="mcs">Tap to change mode</div></div>
+      <span class="chev2">›</span>
+    </div>
+    <h2 class="dir">${RSVG.bolt} ALWAYS DIRECT</h2>${lc(dl,'direct')}
+    <h2 class="vpn">${RSVG.shield} ALWAYS VIA VPN</h2>${lc(vl,'vpn')}
+    <p class="foot">Other traffic follows the selected mode. Changes take effect after you tap Apply.</p>
+    ${apply}
     ${rsheet()}`);
+}
+function viewRouteMode(){var cur=(ROUTING&&ROUTING.mode)||'rf-direct';
+  return shell('rmode',`<div class="modecards" style="margin-top:20px">${RT_MODES.map(m=>`<div class="mc ${cur===m[0]?'on':''}" onclick="chooseMode('${m[0]}')"><div class="grow"><div class="mct">${m[1]}</div><div class="mcs">${m[2]}</div></div><span class="mcchk">✓</span></div>`).join('')}</div>
+    <p class="foot">The mode decides where traffic goes by default. The lists on the Routing screen always override it.</p>`);
 }
 function rsheet(){var s=RSHEET||{tab:'site'};var groups=GEOGROUPS||[];
   return `<div class="sheet-ov" id="rsheet">
     <div class="sheet-bg" onclick="closeRsheet()"></div>
     <div class="sheet">
       <div class="sheet-grab"></div>
-      <h3>Добавить ${s.bucket==='vpn'?'через VPN':'напрямую'}</h3>
-      <div class="rseg"><button class="${s.tab!=='group'?'on':''}" onclick="rtab('site')">Свой сайт</button><button class="${s.tab==='group'?'on':''}" onclick="rtab('group')">Группа</button></div>
+      <h3>Add to ${s.bucket==='vpn'?'VPN':'direct'}</h3>
+      <div class="rseg"><button class="${s.tab!=='group'?'on':''}" onclick="rtab('site')">Custom site</button><button class="${s.tab==='group'?'on':''}" onclick="rtab('group')">Group</button></div>
       ${s.tab==='group'
-        ? `<div class="card lst" style="max-height:46vh;overflow:auto">${groups.length?groups.map(g=>`<div class="it" style="cursor:pointer" onclick="addGroupRule('${g.kind}','${esc(g.category)}')"><span class="ric ${g.kind==='ip'?'ipg':'siteg'}">${g.kind==='ip'?RSVG.server:RSVG.globe}</span><div class="grow"><div class="k">${esc(geoLabel(g.category))}</div><div class="d">${g.kind==='ip'?'geoip':'geosite'} · ${esc(g.category)}</div></div><span class="tag ${g.kind==='ip'?'ip':'site'}">${g.kind==='ip'?'IP':'САЙТЫ'}</span></div>`).join(''):'<div class="empty">Нет групп</div>'}</div>`
-        : `<input id="rinput" placeholder="youtube.com или 1.2.3.0/24" onkeydown="if(event.key==='Enter')addSiteRule()"><button class="btn" style="width:100%;margin-top:12px" onclick="addSiteRule()">Добавить</button>`}
+        ? `<div class="card lst" style="max-height:46vh;overflow:auto">${groups.length?groups.map(g=>`<div class="it" style="cursor:pointer" onclick="addGroupRule('${g.kind}','${esc(g.category)}')"><span class="ric ${g.kind==='ip'?'ipg':'siteg'}">${g.kind==='ip'?RSVG.server:RSVG.globe}</span><div class="grow"><div class="k">${esc(geoLabel(g.category))}</div><div class="d">${g.kind==='ip'?'geoip':'geosite'} · ${esc(g.category)}</div></div><span class="tag ${g.kind==='ip'?'ip':'site'}">${g.kind==='ip'?'IP':'SITES'}</span></div>`).join(''):'<div class="empty">No groups</div>'}</div>`
+        : `<input id="rinput" placeholder="youtube.com or 1.2.3.0/24" onkeydown="if(event.key==='Enter')addSiteRule()"><button class="btn" style="width:100%;margin-top:12px" onclick="addSiteRule()">Add</button>`}
     </div>
   </div>`;}
 async function loadRouting(){if(ROUTELOADING)return;ROUTELOADING=true;
   if(DEMO){ROUTING={mode:'rf-direct',rules:[{kind:'geosite',category:'youtube',action:'vpn'},{kind:'domain',value:'gosuslugi.ru',action:'direct'}]};GEOGROUPS=[{kind:'site',category:'category-ru'},{kind:'ip',category:'direct'},{kind:'site',category:'youtube'},{kind:'site',category:'telegram'},{kind:'site',category:'category-ads'}];ROUTELOADING=false;render();return;}
   try{const r=await apij('/routing');if(r.ok&&r.body)ROUTING=r.body;const g=await apij('/geo/groups');if(g.ok&&g.body)GEOGROUPS=g.body;}catch(e){}
   if(!ROUTING)ROUTING={mode:'rf-direct',rules:[]};ROUTELOADING=false;render();}
-function setRouteMode(m){if(!ROUTING||ROUTING.mode===m)return;ROUTING.mode=m;ROUTEDIRTY=true;persistRouting();render();}
+function chooseMode(m){if(ROUTING&&ROUTING.mode!==m){ROUTING.mode=m;ROUTEDIRTY=true;persistRouting();}go('#routing');}
 function removeRule(i){ROUTING.rules.splice(i,1);ROUTEDIRTY=true;persistRouting();render();}
-function addSiteRule(){var el=$('#rinput');var n=normSite(el?el.value:'');if(!n){toast('Введите домен или IP',true);return;}ROUTING.rules.push(Object.assign({},n,{action:RSHEET.bucket}));ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Добавлено');}
-function addGroupRule(kind,cat){ROUTING.rules.push({kind:(kind==='ip'?'geoip':'geosite'),category:cat,action:RSHEET.bucket});ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Группа добавлена');}
+function addSiteRule(){var el=$('#rinput');var n=normSite(el?el.value:'');if(!n){toast('Enter a domain or IP',true);return;}ROUTING.rules.push(Object.assign({},n,{action:RSHEET.bucket}));ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Added');}
+function addGroupRule(kind,cat){ROUTING.rules.push({kind:(kind==='ip'?'geoip':'geosite'),category:cat,action:RSHEET.bucket});ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Group added');}
 async function persistRouting(){if(DEMO)return;try{await apij('/routing',{method:'PUT',body:JSON.stringify({mode:ROUTING.mode,rules:ROUTING.rules})});}catch(e){}}
-async function applyRouting(){if(DEMO){ROUTEDIRTY=false;toast('Применено (demo)');render();return;}ROUTEBUSY=true;render();var ok=false;try{const r=await apij('/routing/apply',{method:'POST'});ok=r.ok;}catch(e){}ROUTEBUSY=false;if(ok){ROUTEDIRTY=false;toast('Маршрутизация обновлена');}else{toast('Не удалось применить — откат',true);}render();}
+async function applyRouting(){if(DEMO){ROUTEDIRTY=false;toast('Applied (demo)');render();return;}ROUTEBUSY=true;render();var ok=false;try{const r=await apij('/routing/apply',{method:'POST'});ok=r.ok;}catch(e){}ROUTEBUSY=false;if(ok){ROUTEDIRTY=false;toast('Routing updated');}else{toast('Apply failed — rolled back',true);}render();}
 function openRsheet(b){RSHEET={bucket:b,tab:'site'};render();requestAnimationFrame(function(){var e=$('#rsheet');if(e)e.classList.add('open');});}
 function rtab(t){if(RSHEET)RSHEET.tab=t;render();var e=$('#rsheet');if(e)e.classList.add('open');}
 function closeRsheet(){var e=$('#rsheet');if(e)e.classList.remove('open');setTimeout(function(){RSHEET=null;render();},280);}
@@ -649,8 +666,8 @@ function viewSettings(){const ipv6=((STATE.settings||{}).ipv6Mode)||'reject';con
     <h2>Appearance</h2>
     <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Dark mode</div><div class="sub">Switch between light and dark theme</div></div>
       <label class="switch"><input type="checkbox" ${THEME==='dark'?'checked':''} onchange="setTheme(this.checked)"><span class="sl"></span></label></div></div>
-    <h2>Маршрутизация</h2>
-    <div class="card lst"><div class="it" style="cursor:pointer" onclick="go('#geo')"><div style="flex:1;min-width:0"><div class="k">Геофайлы</div><div class="sub">${esc(geoSub())}</div></div><span class="chev2">›</span></div></div>
+    <h2>Routing</h2>
+    <div class="card lst"><div class="it" style="cursor:pointer" onclick="go('#geo')"><div style="flex:1;min-width:0"><div class="k">Geo files</div><div class="sub">${esc(geoSub())}</div></div><span class="chev2">›</span></div></div>
     <h2>Network</h2>
     <div class="card lst">
       <div class="it"><div style="flex:1"><div class="k">IPv6 for VPN devices</div><div class="sub">Reject prevents IPv6 leaks; Allow passes IPv6 through</div></div>
@@ -672,34 +689,34 @@ function viewSettings(){const ipv6=((STATE.settings||{}).ipv6Mode)||'reject';con
     <h2>Policy</h2>
     <div class="card lst"><div class="it"><div style="flex:1"><div class="k">Keenetic policy</div><div class="sub">Devices assigned here are managed by Opengater</div></div><span class="muted">Opengater Proxy Manager</span></div></div>`);
 }
-/* Геофайлы page (#geo) — choose / update / add geosite & geoip lists */
-function geoSub(){if(!GEO)return 'Выбор, обновление и загрузка списков';
+/* Geo files page (#geo) — choose / update / add geosite & geoip lists */
+function geoSub(){if(!GEO)return 'Choose, update and add lists';
   function nm(id){var s=(GEO.sources||[]).find(function(x){return x.id===id;});return s?s.name:'—';}
   return nm(GEO.activeGeosite)+' · '+nm(GEO.activeGeoip);}
-function geoAge(ts){ts=+ts||0;if(!ts)return 'обновлено: —';var d=Math.floor(Date.now()/1000-ts);
-  if(d<0)d=0; if(d<3600)return 'обновлено только что'; if(d<86400)return 'обновлено '+Math.floor(d/3600)+' ч назад';
-  var days=Math.floor(d/86400); return 'обновлено '+days+' '+(days===1?'день':(days<5?'дня':'дней')+'')+' назад';}
+function geoAge(ts){ts=+ts||0;if(!ts)return 'never updated';var d=Math.floor(Date.now()/1000-ts);
+  if(d<0)d=0; if(d<3600)return 'updated just now'; if(d<86400)return 'updated '+Math.floor(d/3600)+'h ago';
+  var days=Math.floor(d/86400); return 'updated '+days+' '+(days===1?'day':'days')+' ago';}
 function geoItem(s){var ip=s.kind==='geoip';var active=(ip?GEO.activeGeoip:GEO.activeGeosite)===s.id;var busy=GEOBUSY===s.id;
   var n=(s.categories||[]).length;
   return `<div class="it geoit${active?' on':''}">
     <div class="grow geosel" onclick="setActiveGeo('${s.kind}','${esc(s.id)}')">
       <span class="ric ${ip?'ipg':'siteg'}">${ip?RSVG.server:RSVG.globe}</span>
-      <div style="min-width:0"><div class="k">${esc(s.name)}${s.builtin?' <span class="gtagb">встроенный</span>':''}</div>
-      <div class="d">${busy?'обновление…':n+' '+(n===1?'группа':(n<5?'группы':'групп'))+' · '+geoAge(s.updatedAt)}</div></div>
+      <div style="min-width:0"><div class="k">${esc(s.name)}${s.builtin?' <span class="gtagb">built-in</span>':''}</div>
+      <div class="d">${busy?'updating…':n+' '+(n===1?'group':'groups')+' · '+geoAge(s.updatedAt)}</div></div>
     </div>
     <span class="grad${active?' on':''}" onclick="setActiveGeo('${s.kind}','${esc(s.id)}')"></span>
-    <span class="gbtn" title="Обновить" onclick="updateGeo('${esc(s.id)}')">${busy?'<span class="ld"></span>':RSVG.refresh}</span>
-    ${s.builtin?'':`<span class="gbtn del" title="Удалить" onclick="removeGeo('${esc(s.id)}')">${RSVG.trash}</span>`}
+    <span class="gbtn" title="Update" onclick="updateGeo('${esc(s.id)}')">${busy?'<span class="ld"></span>':RSVG.refresh}</span>
+    ${s.builtin?'':`<span class="gbtn del" title="Remove" onclick="removeGeo('${esc(s.id)}')">${RSVG.trash}</span>`}
   </div>`;}
 function geoList(kind){var ss=(GEO.sources||[]).filter(function(s){return s.kind===kind;});
-  return '<div class="card lst">'+(ss.length?ss.map(geoItem).join(''):'<div class="empty">Нет списков</div>')
-    +'<div class="addrow" onclick="openGeoSheet(\''+kind+'\')">'+RSVG.plus+'Добавить '+(kind==='geoip'?'IP-список':'список сайтов')+'</div></div>';}
+  return '<div class="card lst">'+(ss.length?ss.map(geoItem).join(''):'<div class="empty">No lists</div>')
+    +'<div class="addrow" onclick="openGeoSheet(\''+kind+'\')">'+RSVG.plus+'Add '+(kind==='geoip'?'IP list':'site list')+'</div></div>';}
 function viewGeo(){
   if(!GEO){loadGeo();return shell('geo','<div class="empty" style="padding:70px 20px"><span class="ld"></span></div>');}
   return shell('geo',`
-    <p class="foot" style="margin:2px 4px 14px">Активны один список сайтов (geosite) и один список IP (geoip). Нажмите на список, чтобы сделать его активным. Изменения учитываются при следующем «Применить» на странице маршрутизации.</p>
-    <div class="h2 dir">СПИСКИ САЙТОВ · GEOSITE</div>${geoList('geosite')}
-    <div class="h2 vpn">СПИСКИ IP · GEOIP</div>${geoList('geoip')}
+    <p class="foot" style="margin:20px 4px 6px">One site list (geosite) and one IP list (geoip) are active. Tap a list to make it active. Changes take effect on the next Apply on the Routing screen.</p>
+    <h2>Site lists · geosite</h2>${geoList('geosite')}
+    <h2>IP lists · geoip</h2>${geoList('geoip')}
     ${geoSheet()}`);
 }
 function geoSheet(){var s=GSHEET||{kind:'geosite'};var ip=s.kind==='geoip';var busy=GEOBUSY==='add';
@@ -707,17 +724,17 @@ function geoSheet(){var s=GSHEET||{kind:'geosite'};var ip=s.kind==='geoip';var b
     <div class="sheet-bg" onclick="closeGeoSheet()"></div>
     <div class="sheet">
       <div class="sheet-grab"></div>
-      <h3>Добавить геофайл</h3>
-      <div class="rseg"><button class="${!ip?'on':''}" onclick="gkind('geosite')">Сайты (geosite)</button><button class="${ip?'on':''}" onclick="gkind('geoip')">IP (geoip)</button></div>
-      <input id="gname" placeholder="Название (напр. Antifilter)" ${busy?'disabled':''}>
+      <h3>Add geo file</h3>
+      <div class="rseg"><button class="${!ip?'on':''}" onclick="gkind('geosite')">Sites (geosite)</button><button class="${ip?'on':''}" onclick="gkind('geoip')">IP (geoip)</button></div>
+      <input id="gname" placeholder="Name (e.g. Antifilter)" ${busy?'disabled':''}>
       <input id="gurl" placeholder="https://…/${ip?'geoip':'geosite'}.dat" style="margin-top:10px" ${busy?'disabled':''} onkeydown="if(event.key==='Enter')addGeoSource()">
-      <button class="btn" style="width:100%;margin-top:12px" ${busy?'disabled':''} onclick="addGeoSource()">${busy?'<span class="ld"></span> Скачиваю и разбираю…':'Скачать и добавить'}</button>
-      <p class="foot" style="margin:12px 2px 0">Скачивается .dat, из него читаются категории. Подходят geosite/geoip в формате v2ray .dat.</p>
+      <button class="btn" style="width:100%;margin-top:12px" ${busy?'disabled':''} onclick="addGeoSource()">${busy?'<span class="ld"></span> Downloading & parsing…':'Download & add'}</button>
+      <p class="foot" style="margin:12px 2px 0">Downloads the .dat and reads its categories. v2ray geosite/geoip .dat files are supported.</p>
     </div>
   </div>`;}
 async function loadGeo(){if(GEOLOADING)return;GEOLOADING=true;
   if(DEMO){GEO={sources:[
-    {id:'roscomvpn-geosite',name:'RoscomVPN · сайты',kind:'geosite',file:'roscomvpn-geosite.dat',categories:['category-ru','category-geoblock-ru','youtube','telegram','steam','category-ads'],builtin:true,updatedAt:Math.floor(Date.now()/1000)-3600},
+    {id:'roscomvpn-geosite',name:'RoscomVPN · sites',kind:'geosite',file:'roscomvpn-geosite.dat',categories:['category-ru','category-geoblock-ru','youtube','telegram','steam','category-ads'],builtin:true,updatedAt:Math.floor(Date.now()/1000)-3600},
     {id:'roscomvpn-geoip',name:'RoscomVPN · IP',kind:'geoip',file:'roscomvpn-geoip.dat',categories:['direct','whitelist','private'],builtin:true,updatedAt:Math.floor(Date.now()/1000)-3600},
     {id:'antifilter-geosite',name:'Antifilter',kind:'geosite',file:'antifilter-geosite.dat',categories:['community','refilter'],builtin:false,updatedAt:Math.floor(Date.now()/1000)-200000}],
     activeGeosite:'roscomvpn-geosite',activeGeoip:'roscomvpn-geoip'};GEOLOADING=false;render();return;}
@@ -725,25 +742,25 @@ async function loadGeo(){if(GEOLOADING)return;GEOLOADING=true;
   if(!GEO)GEO={sources:[],activeGeosite:'',activeGeoip:''};GEOLOADING=false;render();}
 async function setActiveGeo(kind,id){if(!GEO)return;var key=kind==='geoip'?'activeGeoip':'activeGeosite';if(GEO[key]===id)return;
   GEO[key]=id;GEOGROUPS=null;render();
-  if(DEMO){toast('Активный список изменён');return;}
-  try{const r=await apij('/geo/active',{method:'PUT',body:JSON.stringify({kind:kind,id:id})});if(r.ok&&r.body)GEO=r.body;else toast('Не удалось переключить',true);}catch(e){toast('Ошибка сети',true);}render();}
+  if(DEMO){toast('Active list changed');return;}
+  try{const r=await apij('/geo/active',{method:'PUT',body:JSON.stringify({kind:kind,id:id})});if(r.ok&&r.body)GEO=r.body;else toast('Could not switch',true);}catch(e){toast('Network error',true);}render();}
 async function updateGeo(id){if(GEOBUSY)return;GEOBUSY=id;render();
-  if(DEMO){setTimeout(function(){GEOBUSY=null;toast('Список обновлён (demo)');render();},900);return;}
-  try{const r=await apij('/geo/sources/'+encodeURIComponent(id)+'/update',{method:'POST'});if(r.ok&&r.body){GEO=r.body;GEOGROUPS=null;toast('Список обновлён');}else toast('Не удалось обновить',true);}catch(e){toast('Ошибка сети',true);}GEOBUSY=null;render();}
-async function removeGeo(id){if(GEOBUSY)return;if(!confirm('Удалить этот геофайл?'))return;GEOBUSY=id;render();
-  if(DEMO){setTimeout(function(){GEO.sources=GEO.sources.filter(function(s){return s.id!==id;});GEOBUSY=null;toast('Удалено (demo)');render();},500);return;}
-  try{const r=await apij('/geo/sources/'+encodeURIComponent(id)+'/remove',{method:'POST'});if(r.ok&&r.body){GEO=r.body;GEOGROUPS=null;toast('Удалено');}else toast('Не удалось удалить',true);}catch(e){toast('Ошибка сети',true);}GEOBUSY=null;render();}
+  if(DEMO){setTimeout(function(){GEOBUSY=null;toast('List updated (demo)');render();},900);return;}
+  try{const r=await apij('/geo/sources/'+encodeURIComponent(id)+'/update',{method:'POST'});if(r.ok&&r.body){GEO=r.body;GEOGROUPS=null;toast('List updated');}else toast('Update failed',true);}catch(e){toast('Network error',true);}GEOBUSY=null;render();}
+async function removeGeo(id){if(GEOBUSY)return;if(!confirm('Remove this geo file?'))return;GEOBUSY=id;render();
+  if(DEMO){setTimeout(function(){GEO.sources=GEO.sources.filter(function(s){return s.id!==id;});GEOBUSY=null;toast('Removed (demo)');render();},500);return;}
+  try{const r=await apij('/geo/sources/'+encodeURIComponent(id)+'/remove',{method:'POST'});if(r.ok&&r.body){GEO=r.body;GEOGROUPS=null;toast('Removed');}else toast('Remove failed',true);}catch(e){toast('Network error',true);}GEOBUSY=null;render();}
 function openGeoSheet(kind){GSHEET={kind:kind};render();requestAnimationFrame(function(){var e=$('#gsheet');if(e)e.classList.add('open');});}
 function gkind(k){if(GSHEET)GSHEET.kind=k;render();var e=$('#gsheet');if(e)e.classList.add('open');}
 function closeGeoSheet(){var e=$('#gsheet');if(e)e.classList.remove('open');setTimeout(function(){GSHEET=null;render();},280);}
 async function addGeoSource(){if(GEOBUSY)return;var ni=$('#gname'),ui=$('#gurl');var name=(ni?ni.value:'').trim();var url=(ui?ui.value:'').trim();var kind=(GSHEET||{}).kind||'geosite';
-  if(!/^https?:\/\/.+/.test(url)){toast('Введите URL .dat-файла',true);return;}
+  if(!/^https?:\/\/.+/.test(url)){toast('Enter the .dat file URL',true);return;}
   GEOBUSY='add';render();var e=$('#gsheet');if(e)e.classList.add('open');
-  if(DEMO){setTimeout(function(){GEO.sources.push({id:'custom-'+kind,name:name||'Новый список',kind:kind,categories:['sample'],builtin:false,updatedAt:Math.floor(Date.now()/1000)});GEOBUSY=null;toast('Добавлено (demo)');closeGeoSheet();},900);return;}
+  if(DEMO){setTimeout(function(){GEO.sources.push({id:'custom-'+kind,name:name||'New list',kind:kind,categories:['sample'],builtin:false,updatedAt:Math.floor(Date.now()/1000)});GEOBUSY=null;toast('Added (demo)');closeGeoSheet();},900);return;}
   try{const r=await apij('/geo/sources',{method:'POST',body:JSON.stringify({kind:kind,name:name||url,url:url})});
-    if(r.ok&&r.body){GEO=r.body;GEOGROUPS=null;GEOBUSY=null;toast('Геофайл добавлен');closeGeoSheet();return;}
-    GEOBUSY=null;toast((r.body&&(r.body.detail||r.body.error))||'Не удалось добавить',true);render();var e2=$('#gsheet');if(e2)e2.classList.add('open');
-  }catch(err){GEOBUSY=null;toast('Ошибка сети',true);render();var e3=$('#gsheet');if(e3)e3.classList.add('open');}}
+    if(r.ok&&r.body){GEO=r.body;GEOGROUPS=null;GEOBUSY=null;toast('Geo file added');closeGeoSheet();return;}
+    GEOBUSY=null;toast((r.body&&(r.body.detail||r.body.error))||'Add failed',true);render();var e2=$('#gsheet');if(e2)e2.classList.add('open');
+  }catch(err){GEOBUSY=null;toast('Network error',true);render();var e3=$('#gsheet');if(e3)e3.classList.add('open');}}
 /* Software Updates page (#update) */
 function _updStage(s){return ({starting:[6,'Starting…'],downloading:[28,'Downloading…'],validating:[48,'Validating…'],installing:[66,'Installing…'],swapping:[82,'Applying…'],restarting:[93,'Restarting…'],done:[100,'Update successful'],failed:[100,'Update failed']})[s]||[6,s||'Starting…'];}
 function updMsg(st){return st.state==='done'?('Updated to v'+(st.version||(UPD&&UPD.latest)||'')+' · reloading…'):('Updating to v'+((UPD&&UPD.latest)||''));}
@@ -886,9 +903,10 @@ function render(){
   else if(h==='update')v=viewUpdate();
   else if(h==='settings')v=viewSettings();
   else if(h==='geo')v=viewGeo();
+  else if(h==='rmode')v=viewRouteMode();
   else v=viewDashboard(health,stack);
   app.innerHTML=v;
-  if(h==='dashboard'||!['subscription','routing','devices','logs','ping','update','settings','geo'].includes(h))startUp();
+  if(h==='dashboard'||!['subscription','routing','devices','logs','ping','update','settings','geo','rmode'].includes(h))startUp();
   if(h==='logs')loadLog();
   if(h==='devices'&&(Date.now()-DEVTS>8000)){DEVTS=Date.now();loadDevices();}
   if(h==='settings')loadSettings();
