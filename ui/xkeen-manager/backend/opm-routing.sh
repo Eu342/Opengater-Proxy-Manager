@@ -16,19 +16,19 @@ XCFG="${XRAY_CFG_DIR:-/opt/etc/xray/configs}"
 ASSET="${XRAY_GEO_DIR:-/opt/etc/xray/dat}"
 XRAY="${XRAY_BIN:-/opt/sbin/xray}"
 
-# Default "always direct" rules — common local / bypass / P2P traffic that should skip the
-# VPN out of the box. Only categories that actually exist in the ACTIVE geo sources are
-# emitted, so a custom geo-file with different categories never yields a broken ext: ref.
-# These are ordinary, user-deletable rules; the defaultsSeeded flag stops deleted ones from
-# coming back.
+# Default "always direct" rules — common local / P2P traffic shown as ordinary,
+# user-DELETABLE rules in the Always-direct list. (whitelist is NOT here: it belongs to the
+# rf-direct mode preset, see _directcats.) Only categories that actually exist in the active
+# geo sources are emitted, so a custom geo-file never yields a broken ext: ref. The
+# defaultsSeeded flag stops deleted ones from coming back.
 _default_rules() {
   [ -f "$GEO" ] || { printf '[]'; return; }
   "$JQ" -c '
     . as $g
     | ([$g.sources[]|select(.id==$g.activeGeosite)][0].categories // []) as $gs
     | ([$g.sources[]|select(.id==$g.activeGeoip)][0].categories // []) as $gi
-    | ( (["whitelist","private","torrent"] | map(select(. as $c | $gs|index($c)) | {kind:"geosite",category:.,action:"direct"}))
-      + (["whitelist","private"]           | map(select(. as $c | $gi|index($c)) | {kind:"geoip",  category:.,action:"direct"})) )
+    | ( (["private","torrent"] | map(select(. as $c | $gs|index($c)) | {kind:"geosite",category:.,action:"direct"}))
+      + (["private"]           | map(select(. as $c | $gi|index($c)) | {kind:"geoip",  category:.,action:"direct"})) )
   ' "$GEO" 2>/dev/null
 }
 
@@ -52,14 +52,24 @@ _migrate_defaults() {
   ' "$ROUTING" > "$_t" 2>/dev/null && mv "$_t" "$ROUTING" || rm -f "$_t"
 }
 
-# gsfile|gifile|rudom|ruip  — from the active geo sources (empty fields if no geo.json)
-_geoargs() {
-  [ -f "$GEO" ] || { printf '|||'; return; }
-  "$JQ" -r '
+# {gsfile,gifile,gsdirect[],gidirect[]} for the rf-direct mode preset. gsdirect/gidirect are
+# the categories that the "Russia direct, world via VPN" mode sends DIRECT: the role-tagged
+# RF list (ru-domains / ru-ips) PLUS the maintainer whitelist, where each exists. Emitted as
+# JSON arrays so the generator builds one combined direct rule per .dat.
+_geocfg() {
+  [ -f "$GEO" ] || { printf '{"gsfile":"","gifile":"","gsdirect":[],"gidirect":[]}'; return; }
+  "$JQ" -c '
     . as $g
     | ([$g.sources[]|select(.id==$g.activeGeosite)][0]) as $gs
     | ([$g.sources[]|select(.id==$g.activeGeoip)][0]) as $gi
-    | [ ($gs.file // ""), ($gi.file // ""), (($gs.roles."ru-domains") // ""), (($gi.roles."ru-ips") // "") ] | join("|")
+    | {
+        gsfile: ($gs.file // ""),
+        gifile: ($gi.file // ""),
+        gsdirect: ( [ ($gs.roles."ru-domains" // empty) ]
+                    + ( ["whitelist"] | map(select(. as $c | ($gs.categories // [])|index($c))) ) | unique ),
+        gidirect: ( [ ($gi.roles."ru-ips" // empty) ]
+                    + ( ["whitelist"] | map(select(. as $c | ($gi.categories // [])|index($c))) ) | unique )
+      }
   ' "$GEO" 2>/dev/null
 }
 
@@ -79,12 +89,12 @@ cmd_set() {
 
 cmd_generate() {
   _seed
-  _a="$(_geoargs)"
-  _gs="$(printf '%s' "$_a" | cut -d'|' -f1)"
-  _gi="$(printf '%s' "$_a" | cut -d'|' -f2)"
-  _rd="$(printf '%s' "$_a" | cut -d'|' -f3)"
-  _ri="$(printf '%s' "$_a" | cut -d'|' -f4)"
-  "$JQ" -f "$GEN" --arg gsfile "$_gs" --arg gifile "$_gi" --arg rudom "$_rd" --arg ruip "$_ri" "$ROUTING"
+  _c="$(_geocfg)"; case "$_c" in '{'*) : ;; *) _c='{"gsfile":"","gifile":"","gsdirect":[],"gidirect":[]}' ;; esac
+  _gs="$(printf '%s' "$_c" | "$JQ" -r .gsfile)"
+  _gi="$(printf '%s' "$_c" | "$JQ" -r .gifile)"
+  _gsd="$(printf '%s' "$_c" | "$JQ" -c .gsdirect)"
+  _gid="$(printf '%s' "$_c" | "$JQ" -c .gidirect)"
+  "$JQ" -f "$GEN" --arg gsfile "$_gs" --arg gifile "$_gi" --argjson gsdirect "$_gsd" --argjson gidirect "$_gid" "$ROUTING"
 }
 
 # Live apply: generate -> backup -> write 05_routing -> xray config self-test (with the

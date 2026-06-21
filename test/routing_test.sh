@@ -3,7 +3,7 @@ set -eu
 DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$DIR/lib.sh"
 GEN="$DIR/../ui/xkeen-manager/backend/lib/jq/routing-gen.jq"
-gen() { jq -f "$GEN" --arg gsfile roscomvpn-geosite.dat --arg gifile roscomvpn-geoip.dat --arg rudom category-ru --arg ruip direct "$@"; }
+gen() { jq -f "$GEN" --arg gsfile roscomvpn-geosite.dat --arg gifile roscomvpn-geoip.dat --argjson gsdirect '["category-ru","whitelist"]' --argjson gidirect '["direct","whitelist"]' "$@"; }
 
 ROUT="$(gen "$DIR/fixtures/routing-model.json")"
 assert_json_eq "rf-direct routing golden" "$DIR/golden/routing-gen.json" "$ROUT"
@@ -11,6 +11,13 @@ assert_json_eq "rf-direct routing golden" "$DIR/golden/routing-gen.json" "$ROUT"
 # specificity: more specific domain comes first (ads.youtube.com before youtube.com)
 ord="$(printf '%s' "$ROUT" | jq -r '[.routing.rules[].domain[0]?]|map(select(.=="domain:ads.youtube.com" or .=="domain:youtube.com"))|join(",")')"
 assert_eq "specificity order" "domain:ads.youtube.com,domain:youtube.com" "$ord"
+
+# rf-direct preset routes whitelist direct as part of the MODE (one combined geosite rule
+# with category-ru + whitelist, one geoip rule with direct + whitelist).
+assert_eq "preset geosite has category-ru+whitelist" "true" \
+  "$(printf '%s' "$ROUT" | jq -c '[.routing.rules[]|select(.outboundTag=="direct" and ((.domain//[])|any(test("category-ru"))))][0].domain' | jq 'any(test("whitelist"))')"
+assert_eq "preset geoip has whitelist" "true" \
+  "$(printf '%s' "$ROUT" | jq '[.routing.rules[]|select(.outboundTag=="direct" and ((.ip//[])|any(test("geoip.dat:whitelist"))))]|length>0')"
 
 # precedence (regression): an explicit USER rule must precede the rf-direct preset, so an
 # explicit per-site choice overrides the mode (e.g. a .ru site forced via VPN beats the
@@ -40,9 +47,11 @@ cat > "$W/geo.json" <<'JSON'
   {"id":"gs","kind":"geosite","categories":["category-ru","whitelist","private","torrent"]},
   {"id":"gi","kind":"geoip","categories":["direct","whitelist","private"]}]}
 JSON
-# fresh seed: whitelist/private/torrent (geosite) + whitelist/private (geoip), all direct
+# fresh seed: private/torrent (geosite) + private (geoip) = 3, all direct. whitelist is NOT
+# a seeded rule (it lives in the rf-direct preset).
 seed="$(sh "$RSH" get)"
-assert_eq "seed defaults count" "5" "$(printf '%s' "$seed" | jq '.rules|length')"
+assert_eq "seed defaults count" "3" "$(printf '%s' "$seed" | jq '.rules|length')"
+assert_eq "seed has no whitelist rule" "0" "$(printf '%s' "$seed" | jq '[.rules[]|select(.category=="whitelist")]|length')"
 assert_eq "seed all direct" "true" "$(printf '%s' "$seed" | jq '[.rules[].action]|all(.=="direct")')"
 assert_eq "seed flagged" "true" "$(printf '%s' "$seed" | jq '.defaultsSeeded')"
 # migrate an existing pre-defaults model: keep its rule, add defaults once
@@ -50,8 +59,8 @@ rm -f "$W/routing.json"
 printf '{"mode":"rf-direct","rules":[{"kind":"domain","value":"2ip.ru","action":"vpn"}]}' > "$W/routing.json"
 mig="$(sh "$RSH" get)"
 assert_eq "migrate keeps user rule" "true" "$(printf '%s' "$mig" | jq '[.rules[]|select(.value=="2ip.ru")]|length==1')"
-assert_eq "migrate adds defaults" "6" "$(printf '%s' "$mig" | jq '.rules|length')"
-assert_eq "migrate idempotent" "6" "$(sh "$RSH" get | jq '.rules|length')"
+assert_eq "migrate adds defaults" "4" "$(printf '%s' "$mig" | jq '.rules|length')"
+assert_eq "migrate idempotent" "4" "$(sh "$RSH" get | jq '.rules|length')"
 # a deleted default must NOT come back (flag preserved through set)
 sh "$RSH" get | jq 'del(.rules[]|select(.category=="torrent"))|{mode,rules}' | sh "$RSH" set >/dev/null
 assert_eq "deleted default stays gone" "false" "$(sh "$RSH" get | jq '[.rules[]|select(.category=="torrent")]|length>0')"

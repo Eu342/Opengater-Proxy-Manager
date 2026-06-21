@@ -75,7 +75,8 @@
           "redirect"
         ],
         "domain": [
-          "ext:roscomvpn-geosite.dat:category-ru"
+          "ext:roscomvpn-geosite.dat:category-ru",
+          "ext:roscomvpn-geosite.dat:whitelist"
         ],
         "outboundTag": "direct"
       },
@@ -85,7 +86,8 @@
           "redirect"
         ],
         "ip": [
-          "ext:roscomvpn-geoip.dat:direct"
+          "ext:roscomvpn-geoip.dat:direct",
+          "ext:roscomvpn-geoip.dat:whitelist"
         ],
         "outboundTag": "direct"
       },

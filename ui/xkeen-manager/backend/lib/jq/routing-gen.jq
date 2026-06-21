@@ -7,7 +7,8 @@
 #              "geosite" (category) | "geoip" (category)
 #   rule.action: "direct" | "vpn"
 # Args:   $gsfile active geosite .dat filename, $gifile active geoip .dat filename,
-#         $rudom ru-domains category (rf-direct preset), $ruip ru-ips category.
+#         $gsdirect/$gidirect JSON arrays of categories the rf-direct preset sends direct
+#         (RF role list + maintainer whitelist).
 #
 # Order (xray is first-match-wins): explicit USER rules come first, most-specific first
 # (full > domain by label count > ip by prefix > group), so an explicit per-site choice
@@ -37,8 +38,8 @@ def spec(r):
                   elif .kind=="geoip" then {type:"field",inboundTag:["redirect"],ip:["ext:"+$gifile+":"+.category],outboundTag:$o}
                   else empty end ) )
         + ( if (.mode=="rf-direct") then
-              ( (if ($gsfile != "" and $rudom != "") then [{type:"field",inboundTag:["redirect"],domain:["ext:"+$gsfile+":"+$rudom],outboundTag:"direct"}] else [] end)
-              + (if ($gifile != "" and $ruip != "") then [{type:"field",inboundTag:["redirect"],ip:["ext:"+$gifile+":"+$ruip],outboundTag:"direct"}] else [] end) )
+              ( (if ($gsfile != "" and (($gsdirect|length)>0)) then [{type:"field",inboundTag:["redirect"],domain:($gsdirect|map("ext:"+$gsfile+":"+.)),outboundTag:"direct"}] else [] end)
+              + (if ($gifile != "" and (($gidirect|length)>0)) then [{type:"field",inboundTag:["redirect"],ip:($gidirect|map("ext:"+$gifile+":"+.)),outboundTag:"direct"}] else [] end) )
             else [] end )
         + [ {type:"field", inboundTag:["redirect"], outboundTag: $def} ]
       )
