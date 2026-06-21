@@ -105,6 +105,7 @@
   .pbtn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;position:relative;z-index:3}
   .pbtn.on{border-color:var(--blue);color:var(--blue);background:rgba(10,132,255,.08)}
   .pbtn.off{border-color:rgba(120,120,128,.45);color:var(--muted);background:transparent}
+  .pbtn.nosub{opacity:.4;border-style:dashed}
   .pbtn.pending{border-color:rgba(120,120,128,.4);color:var(--muted)}
   .pbtn .cmt{position:absolute;inset:-7px;border-radius:50%;opacity:0;background:conic-gradient(from 0deg,transparent 8%,var(--blue));-webkit-mask:radial-gradient(farthest-side,#0000 calc(100% - 2px),#000 0);mask:radial-gradient(farthest-side,#0000 calc(100% - 2px),#000 0)}
   .pbtn.pending .cmt{opacity:1;animation:spin 1s linear infinite}
@@ -459,16 +460,18 @@ function viewDashboard(h,k){
   const xv=(k.versions||{}).xray||(VCACHE&&VCACHE.xray), sv=(k.versions||{}).singbox||(VCACHE&&VCACHE.singbox);
   const fade=(on,v)=>'<span class="'+(on?'fade':'')+'">'+v+'</span>';   // fade-in once per slot
   const fT=HL&&!SEEN.timer, fV=!!xv&&!SEEN.ver, fI=SL&&!SEEN.ip;
+  const hasSub=!!(sub.locations&&sub.locations.length);   // a node to connect to
+  const on=POWER&&hasSub;   // effective: never "connected" without a node (vpnEnabled defaults true)
   // pexit: show the flag+IP ONLY when there is a real exit IP (VPN up & settled). While
   // connecting/disconnecting (pending) or up-but-waiting-for-IP -> spinner. Off -> dash, no flag.
-  const exip=(POWER&&!VPNPENDING)?((k.vpn||{}).exitIp||''):'';
-  const pexitHtml=(!SL||VPNPENDING||(POWER&&!exip))?spin
+  const exip=(on&&!VPNPENDING)?((k.vpn||{}).exitIp||''):'';
+  const pexitHtml=(!SL||VPNPENDING||(on&&!exip))?spin
     :(exip?fade(fI,'<span class="flagip">'+flagImg(loc.flag)+'<span class="exip">'+esc(exip)+'</span></span>')
           :'<span class="exip">—</span>');
   const _v=shell('dashboard',`
     <div class="card power">
-      <button class="pbtn ${VPNPENDING?'pending':(POWER?'on':'off')}" onclick="togglePower()" title="Connect / disconnect"><span class="cmt"></span><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 7.4a8 8 0 1 0 11.2 0"/></svg></button>
-      <div><div class="pstate">${VPNPENDING?(VPNPENDING==='on'?'Connecting…':'Disconnecting…'):(POWER?'Connected':'Off')}</div><div class="ptimer tnum" id="up">${VPNPENDING?'—':(!HL?spin:fade(fT,POWER?fmtUp(upSec()):'—'))}</div></div>
+      <button class="pbtn ${VPNPENDING?'pending':(on?'on':'off')}${(!hasSub&&!VPNPENDING)?' nosub':''}" onclick="togglePower()" title="${hasSub?'Connect / disconnect':'Add a subscription first'}"><span class="cmt"></span><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 7.4a8 8 0 1 0 11.2 0"/></svg></button>
+      <div><div class="pstate">${VPNPENDING?(VPNPENDING==='on'?'Connecting…':'Disconnecting…'):(on?'Connected':(hasSub?'Off':'No subscription'))}</div><div class="ptimer tnum" id="up">${VPNPENDING?'—':(!HL?spin:fade(fT,on?fmtUp(upSec()):(hasSub?'—':'add one to connect')))}</div></div>
       <span class="grow"></span>
       <div class="pexit">${pexitHtml}</div>
     </div>
@@ -858,8 +861,10 @@ function b64(s){return btoa(unescape(encodeURIComponent(s)));}
 /* ---------- power / uptime ---------- */
 function fmtUp(s){const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h+':'+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');}
 function upSec(){return CONNTS?Math.max(0,Math.floor((Date.now()-CONNTS)/1000)):0;}
-function startUp(){clearInterval(UPTMR);if(POWER&&CONNTS&&(DEMO||(HEALTH&&HEALTH.services)))UPTMR=setInterval(()=>{const e=$('#up');if(e)e.textContent=fmtUp(upSec());},1000);}
-async function togglePower(){const want=!POWER;if(DEMO){POWER=want;CONNTS=want?Date.now():null;render();return;}if(VPNPENDING)return;
+function startUp(){clearInterval(UPTMR);var hasSub=!!(SUB&&SUB.locations&&SUB.locations.length);if(POWER&&hasSub&&CONNTS&&(DEMO||(HEALTH&&HEALTH.services)))UPTMR=setInterval(()=>{const e=$('#up');if(e)e.textContent=fmtUp(upSec());},1000);}
+async function togglePower(){const want=!POWER;
+  if(want&&!(SUB&&SUB.locations&&SUB.locations.length)){toast('Add a subscription first',true);go('#subscription');return;}
+  if(DEMO){POWER=want;CONNTS=want?Date.now():null;render();return;}if(VPNPENDING)return;
   VPNPENDING=want?'on':'off';render();                       // comet spins until the real status resolves
   const r=await apij('/vpn',{method:'PUT',body:JSON.stringify({enabled:want})});
   VPNPENDING=false;
