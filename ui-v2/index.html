@@ -484,23 +484,22 @@ function vlessFromObj(o){if(!o)return null;const name=o.ps||o.name||o.remarks||o
 async function applyLocation(idx){
   const loc=SUB.locations[idx]; SUB.activeIdx=idx; saveSub();
   if(loc.uuid){const x=activeXray();x.proxyConfig=Object.assign({},x.proxyConfig,{transport:loc.transport||'reality',address:loc.address,port:loc.port,uuid:loc.uuid,flow:loc.flow||'',publicKey:loc.publicKey,serverName:loc.serverName,shortId:loc.shortId,fingerprint:loc.fingerprint||'random',xhttpPath:loc.xhttpPath,xhttpMode:loc.xhttpMode});}
-  if(DEMO){POWER=true;CONNTS=Date.now();render();toast('Switched to '+cleanName(loc.name));return;}
+  if(DEMO){POWER=true;CONNTS=Date.now();render();return;}
   const wasOn=POWER;
   if(wasOn){VPNPENDING='on';CONNTS=null;}    // disconnect look + connecting animation on the new location
   render();
-  await pushAndApply('Switched to '+cleanName(loc.name));
+  await pushAndApply();
   if(wasOn){VPNPENDING=false;POWER=true;CONNTS=Date.now();}
   render();DASHTS=0;refreshDash();
 }
-async function pushAndApply(okMsg){
-  if(DEMO){toast(okMsg||'Applied (demo)');render();return;}
-  toast('Applying…');
+async function pushAndApply(){
+  if(DEMO){render();return;}
   let r=await apij('/state',{method:'PUT',body:JSON.stringify(STATE)});
   if(!r.ok){toast('Save failed: '+((r.body&&r.body.detail)||r.status),true);return;}
   r=await apij('/apply',{method:'POST',body:JSON.stringify(STATE)});
   if(!r.ok||!r.body||!r.body.jobId){toast('Apply failed',true);return;}
   const job=r.body.jobId;
-  for(let i=0;i<40;i++){await new Promise(s=>setTimeout(s,500));const j=await apij('/apply/'+job);if(j.ok&&j.body&&j.body.status!=='pending'){if(j.body.status==='ok'){toast(okMsg||'Applied');}else{toast('Apply failed: '+(j.body.detail||''),true);}render();return;}}
+  for(let i=0;i<40;i++){await new Promise(s=>setTimeout(s,500));const j=await apij('/apply/'+job);if(j.ok&&j.body&&j.body.status!=='pending'){if(j.body.status!=='ok'){toast('Apply failed: '+(j.body.detail||''),true);}render();return;}}
   toast('Apply timed out',true);
 }
 
@@ -732,8 +731,8 @@ async function chooseMode(m){if(!ROUTING||ROUTING.mode===m){go('#routing');retur
   // unlike rule edits which batch behind "Apply changes". Persist first so the apply reads it.
   ROUTING.mode=m;ROUTEDIRTY=true;ROUTEBUSY=true;go('#routing');await persistRouting();applyRouting();}
 function removeRule(i){ROUTING.rules.splice(i,1);ROUTEDIRTY=true;persistRouting();render();}
-function addSiteRule(){var el=$('#rinput');var n=normSite(el?el.value:'');if(!n){toast('Enter a domain or IP',true);return;}ROUTING.rules.push(Object.assign({},n,{action:RSHEET.bucket}));ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Added');}
-function addGroupRule(kind,cat){ROUTING.rules.push({kind:(kind==='ip'?'geoip':'geosite'),category:cat,action:RSHEET.bucket});ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Group added');}
+function addSiteRule(){var el=$('#rinput');var n=normSite(el?el.value:'');if(!n){toast('Enter a domain or IP',true);return;}ROUTING.rules.push(Object.assign({},n,{action:RSHEET.bucket}));ROUTEDIRTY=true;persistRouting();closeRsheet();}
+function addGroupRule(kind,cat){ROUTING.rules.push({kind:(kind==='ip'?'geoip':'geosite'),category:cat,action:RSHEET.bucket});ROUTEDIRTY=true;persistRouting();closeRsheet();}
 async function persistRouting(){if(DEMO)return;try{await apij('/routing',{method:'PUT',body:JSON.stringify({mode:ROUTING.mode,rules:ROUTING.rules})});}catch(e){}}
 async function applyRouting(){if(DEMO){ROUTEDIRTY=false;ROUTEBUSY=false;toast('Applied (demo)');render();return;}ROUTEBUSY=true;render();var ok=false;try{const r=await apij('/routing/apply',{method:'POST'});ok=r.ok;}catch(e){}ROUTEBUSY=false;if(ok){ROUTEDIRTY=false;toast('Routing updated');}else{toast('Apply failed — rolled back',true);}render();}
 function openRsheet(b){RSHEET={bucket:b,tab:'site'};render();requestAnimationFrame(function(){var e=$('#rsheet');if(e)e.classList.add('open');});}
@@ -748,7 +747,7 @@ async function loadDevices(){var first=!DEVLIST;DEVTS=Date.now();
   if(DEMO){DEVLIST=[{hostname:'MacBook',ip:'192.168.5.81',mac:'52:45:75:89:ed:b0',active:true,vpn:false},{hostname:'iPhone',ip:'192.168.5.42',mac:'a4:83:e7:11:22:33',active:true,vpn:true},{name:'Samsung TV',ip:'192.168.5.10',mac:'aa:bb:cc:dd:ee:ff',active:false,vpn:false}];if(first)DEVFADE=true;render();DEVFADE=false;return;}
   try{const r=await apij('/devices');if(r.ok)DEVLIST=(r.body&&r.body.devices)||[];}catch(e){}if(first)DEVFADE=true;render();DEVFADE=false;}
 function devRows(d){return '<div class="lst'+(DEVFADE?' devin':'')+'">'+d.map(x=>{const nm=esc(x.name||x.hostname||x.mac);return `<div class="it"><div style="flex:1;min-width:0"><div class="k" style="display:flex;align-items:center;gap:7px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</span><span class="dot${x.active?'':' off'}" title="${x.active?'online':'offline'}"></span></div><div class="sub tnum" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.ip||'')} · ${esc(x.mac||'')}</div></div><label class="switch"><input type="checkbox" data-mac="${esc(x.mac)}" ${x.vpn?'checked':''} onchange="toggleDevice(this.dataset.mac,this.checked,this)"><span class="sl"></span></label></div>`;}).join('')+'</div>';}
-async function toggleDevice(mac,on,el){if(DEMO){toast('VPN '+(on?'on':'off')+' (demo)');return;}if(el)el.disabled=true;toast('Updating…');const r=await apij('/devices/'+encodeURIComponent(mac)+'/vpn',{method:'POST',body:JSON.stringify({enabled:on})});toast(r.ok?('VPN '+(on?'enabled':'disabled')):'Failed: '+((r.body&&r.body.detail)||r.status),!r.ok);setTimeout(loadDevices,500);}
+async function toggleDevice(mac,on,el){if(DEMO){return;}if(el)el.disabled=true;const r=await apij('/devices/'+encodeURIComponent(mac)+'/vpn',{method:'POST',body:JSON.stringify({enabled:on})});if(!r.ok)toast('Failed: '+((r.body&&r.body.detail)||r.status),true);setTimeout(loadDevices,500);}
 
 let CURLOG='xray', CURLVL='all', LOGRAW='', XRLVL='warning';
 function viewLogs(){
@@ -924,11 +923,11 @@ async function setUpdateInterval(v){var iv=parseInt(v,10)||86400;var nm={86400:'
   if(DEMO){toast('Update check: '+nm);return;}
   try{const r=await apij('/update/config',{method:'PUT',body:JSON.stringify({intervalSec:iv})});toast(r.ok?('Update check: '+nm):'Failed',!r.ok);}catch(e){toast('Failed',true);}}
 async function setCore(v){if(v==='mihomo'){toast('mihomo core is coming soon',true);render();return;}STATE.activeCore=v;if(!DEMO){const r=await apij('/core',{method:'PUT',body:JSON.stringify({core:v})});toast(r.ok?'Core: '+v:'Failed',!r.ok);}else toast('Core: '+v);}
-async function setIpv6(v){STATE.settings=Object.assign({},STATE.settings,{ipv6Mode:v});if(!DEMO){const r=await apij('/settings',{method:'PUT',body:JSON.stringify({ipv6Mode:v})});toast(r.ok?'IPv6: '+v:'Failed',!r.ok);}else toast('IPv6: '+v);}
+async function setIpv6(v){STATE.settings=Object.assign({},STATE.settings,{ipv6Mode:v});if(!DEMO){const r=await apij('/settings',{method:'PUT',body:JSON.stringify({ipv6Mode:v})});if(!r.ok)toast('Failed',true);}}
 async function loadSettings(){if(DEMO)return;try{const r=await apij('/services/xray/loglevel');if(r.ok&&r.body&&r.body.level){XRLVL=r.body.level;const s=$('#xrlvl');if(s)s.value=XRLVL;}}catch(e){}}
 function setPingUrl(v){PINGCFG.url=(v||'').trim()||'https://www.gstatic.com/generate_204';localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));}
-function setPingProto(v){PINGCFG.proto=v;localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));toast('Ping protocol: '+v);}
-function setPingDisplay(v){PINGCFG.display=v;localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));toast(v==='bars'?'Ping shown as signal bars':'Ping shown as time');}
+function setPingProto(v){PINGCFG.proto=v;localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));}
+function setPingDisplay(v){PINGCFG.display=v;localStorage.setItem('opg.ping',JSON.stringify(PINGCFG));}
 /* ---------- software updates ---------- */
 async function loadUpdate(force){if(DEMO)return;if(force){UPDBUSY=true;render();}
   try{const r=await apij('/update/check'+(force?'?force=1':''));if(r.ok&&r.body)UPD=r.body;}catch(e){}
@@ -981,7 +980,7 @@ async function togglePower(){const want=!POWER;
   VPNPENDING=want?'on':'off';render();                       // comet spins until the real status resolves
   const r=await apij('/vpn',{method:'PUT',body:JSON.stringify({enabled:want})});
   VPNPENDING=false;
-  if(r.ok){POWER=(r.body&&typeof r.body.enabled==='boolean')?r.body.enabled:want;CONNTS=POWER?Date.now():null;toast(want?'VPN on':'VPN off');}
+  if(r.ok){POWER=(r.body&&typeof r.body.enabled==='boolean')?r.body.enabled:want;CONNTS=POWER?Date.now():null;}
   else{toast('Failed: '+((r.body&&r.body.detail)||r.status),true);}
   render();DASHTS=0;refreshDash();}
 

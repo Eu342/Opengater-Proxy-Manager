@@ -24,7 +24,7 @@ post_login() {
   _res="$(wget -S -O - --header="Cookie: ${_sck}=${_sid}" --header="Content-Type: application/json; charset=utf-8" --post-data="$_payload" "http://$_host/auth" 2>&1)"
   if ! printf '%s' "$_res" | grep -q 'HTTP/1\.[01] 200'; then http_error 401 invalid_credentials "invalid router credentials"; return; fi
   _cookie="${_sck}=${_sid}"
-  session_cache_put "$_cookie" 45
+  session_cache_put "$_cookie" "${XKEEN_SESSION_TTL:-604800}"
   printf 'Status: 200 OK\r\n'
   printf 'Content-Type: application/json; charset=utf-8\r\n'
   printf 'Cache-Control: no-store\r\n'
@@ -45,11 +45,12 @@ post_logout() {
   printf '{"ok":true}\n'
 }
 # get_session: report whether the caller currently has a valid router session.
-# On a cache miss it live-validates and then caches (45s), so repeated status polls
-# don't hit the router. (45s is a re-validation cadence, not the session lifetime.)
+# On a cache miss it live-validates and then caches for XKEEN_SESSION_TTL (default 7d),
+# so a validated login stays active without re-checking Keenetic (whose own web session
+# expires in ~5-10 min and otherwise forced a re-login).
 get_session() {
   _cookie="${HTTP_COOKIE:-}"
-  if [ -n "$_cookie" ] && { session_cache_get "$_cookie" || { _api_keenetic_auth_ok "$_cookie" && session_cache_put "$_cookie" 45; }; }; then
+  if [ -n "$_cookie" ] && { session_cache_get "$_cookie" || { _api_keenetic_auth_ok "$_cookie" && session_cache_put "$_cookie" "${XKEEN_SESSION_TTL:-604800}"; }; }; then
     http_ok '{"ok":true,"authenticated":true}'
   else
     http_ok '{"ok":true,"authenticated":false}'
