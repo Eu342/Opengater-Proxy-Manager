@@ -149,9 +149,6 @@
   .addrow svg{width:18px;height:18px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round}
   .tag{font-size:9.5px;font-weight:700;letter-spacing:.03em;padding:2px 6px;border-radius:5px;flex:none}
   .tag.site{background:rgba(10,132,255,.12);color:var(--blue)} .tag.ip{background:rgba(48,193,78,.13);color:#1f9e3e}
-  h2.dir,h2.vpn{display:flex;align-items:center;gap:6px}
-  h2.dir{color:#1f9e3e} h2.vpn{color:var(--blue)}
-  h2.dir svg,h2.vpn svg{width:15px;height:15px;fill:currentColor;stroke:none}
   .rseg{display:flex;gap:3px;background:rgba(118,118,128,.12);border-radius:11px;padding:3px;margin:4px 0 12px}
   .rseg button{flex:1;font:inherit;font-size:13px;font-weight:600;color:var(--muted);background:transparent;border:0;padding:9px;border-radius:8px;cursor:pointer}
   .rseg button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -582,8 +579,8 @@ function viewRouting(){
       <div class="grow"><div class="mct">${m[1]}</div><div class="mcs">Tap to change mode</div></div>
       <span class="chev2">›</span>
     </div>
-    <h2 class="dir">${RSVG.bolt} ALWAYS DIRECT</h2>${lc(dl,'direct')}
-    <h2 class="vpn">${RSVG.shield} ALWAYS VIA VPN</h2>${lc(vl,'vpn')}
+    <h2>ALWAYS DIRECT</h2>${lc(dl,'direct')}
+    <h2>ALWAYS VIA VPN</h2>${lc(vl,'vpn')}
     <p class="foot">Other traffic follows the selected mode. Changes take effect after you tap Apply.</p>
     ${apply}
     ${rsheet()}`);
@@ -714,9 +711,9 @@ function geoList(kind){var ss=(GEO.sources||[]).filter(function(s){return s.kind
 function viewGeo(){
   if(!GEO){loadGeo();return shell('geo','<div class="empty" style="padding:70px 20px"><span class="ld"></span></div>');}
   return shell('geo',`
-    <p class="foot" style="margin:20px 4px 6px">One site list (geosite) and one IP list (geoip) are active. Tap a list to make it active. Changes take effect on the next Apply on the Routing screen.</p>
     <h2>Site lists · geosite</h2>${geoList('geosite')}
     <h2>IP lists · geoip</h2>${geoList('geoip')}
+    <p class="foot">One site list (geosite) and one IP list (geoip) are active. Tap a list to make it active. Changes take effect on the next Apply on the Routing screen.</p>
     ${geoSheet()}`);
 }
 function geoSheet(){var s=GSHEET||{kind:'geosite'};var ip=s.kind==='geoip';var busy=GEOBUSY==='add';
