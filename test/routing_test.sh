@@ -12,6 +12,13 @@ assert_json_eq "rf-direct routing golden" "$DIR/golden/routing-gen.json" "$ROUT"
 ord="$(printf '%s' "$ROUT" | jq -r '[.routing.rules[].domain[0]?]|map(select(.=="domain:ads.youtube.com" or .=="domain:youtube.com"))|join(",")')"
 assert_eq "specificity order" "domain:ads.youtube.com,domain:youtube.com" "$ord"
 
+# precedence (regression): an explicit USER rule must precede the rf-direct preset, so an
+# explicit per-site choice overrides the mode (e.g. a .ru site forced via VPN beats the
+# category-ru -> direct preset). xray is first-match-wins.
+uidx="$(printf '%s' "$ROUT" | jq '[.routing.rules[].domain[0]?]|index("domain:gosuslugi.ru")')"
+pidx="$(printf '%s' "$ROUT" | jq '[.routing.rules[].domain[0]?]|index("ext:roscomvpn-geosite.dat:category-ru")')"
+assert_eq "user rule precedes rf preset" "true" "$([ "$uidx" -lt "$pidx" ] && echo true || echo false)"
+
 # selective: default flips to direct, no RF preset
 sel="$(jq '.mode="selective"' "$DIR/fixtures/routing-model.json" | gen /dev/stdin)"
 assert_eq "selective catch-all -> direct" "direct" "$(printf '%s' "$sel" | jq -r '.routing.rules[-1].outboundTag')"

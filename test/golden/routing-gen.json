@@ -15,26 +15,6 @@
           "redirect"
         ],
         "domain": [
-          "ext:roscomvpn-geosite.dat:category-ru"
-        ],
-        "outboundTag": "direct"
-      },
-      {
-        "type": "field",
-        "inboundTag": [
-          "redirect"
-        ],
-        "ip": [
-          "ext:roscomvpn-geoip.dat:direct"
-        ],
-        "outboundTag": "direct"
-      },
-      {
-        "type": "field",
-        "inboundTag": [
-          "redirect"
-        ],
-        "domain": [
           "full:exact.example.com"
         ],
         "outboundTag": "vless-reality"
@@ -88,6 +68,26 @@
           "ext:roscomvpn-geosite.dat:category-geoblock-ru"
         ],
         "outboundTag": "vless-reality"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "domain": [
+          "ext:roscomvpn-geosite.dat:category-ru"
+        ],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "redirect"
+        ],
+        "ip": [
+          "ext:roscomvpn-geoip.dat:direct"
+        ],
+        "outboundTag": "direct"
       },
       {
         "type": "field",

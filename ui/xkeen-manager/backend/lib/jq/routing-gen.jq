@@ -9,8 +9,10 @@
 # Args:   $gsfile active geosite .dat filename, $gifile active geoip .dat filename,
 #         $rudom ru-domains category (rf-direct preset), $ruip ru-ips category.
 #
-# Rules are emitted most-specific first (full > domain by label count > ip by prefix >
-# group), then a catch-all that sends "everything else" to the mode's default outbound.
+# Order (xray is first-match-wins): explicit USER rules come first, most-specific first
+# (full > domain by label count > ip by prefix > group), so an explicit per-site choice
+# always wins over the mode preset. THEN the mode preset (rf-direct: RF geosite/geoip ->
+# direct), THEN a catch-all that sends "everything else" to the mode's default outbound.
 def out(a): if a=="direct" then "direct" else "vless-reality" end;
 def spec(r):
   if r.kind=="domain" then (if r.match=="full" then 1000 else 500 end) + ((r.value|split(".")|length))
@@ -23,10 +25,6 @@ def spec(r):
       domainStrategy: "IPIfNonMatch",
       rules: (
         [ {type:"field", inboundTag:["proxy-relay-ss"], outboundTag:"vless-reality"} ]
-        + ( if (.mode=="rf-direct") then
-              ( (if ($gsfile != "" and $rudom != "") then [{type:"field",inboundTag:["redirect"],domain:["ext:"+$gsfile+":"+$rudom],outboundTag:"direct"}] else [] end)
-              + (if ($gifile != "" and $ruip != "") then [{type:"field",inboundTag:["redirect"],ip:["ext:"+$gifile+":"+$ruip],outboundTag:"direct"}] else [] end) )
-            else [] end )
         + ( (.rules // [])
             | to_entries
             | sort_by([ -(spec(.value)), .key ])
@@ -38,6 +36,10 @@ def spec(r):
                   elif .kind=="geosite" then {type:"field",inboundTag:["redirect"],domain:["ext:"+$gsfile+":"+.category],outboundTag:$o}
                   elif .kind=="geoip" then {type:"field",inboundTag:["redirect"],ip:["ext:"+$gifile+":"+.category],outboundTag:$o}
                   else empty end ) )
+        + ( if (.mode=="rf-direct") then
+              ( (if ($gsfile != "" and $rudom != "") then [{type:"field",inboundTag:["redirect"],domain:["ext:"+$gsfile+":"+$rudom],outboundTag:"direct"}] else [] end)
+              + (if ($gifile != "" and $ruip != "") then [{type:"field",inboundTag:["redirect"],ip:["ext:"+$gifile+":"+$ruip],outboundTag:"direct"}] else [] end) )
+            else [] end )
         + [ {type:"field", inboundTag:["redirect"], outboundTag: $def} ]
       )
     }
