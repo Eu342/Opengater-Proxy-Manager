@@ -37,6 +37,8 @@ route_request() {
       case "$_m" in GET) echo get_subscription ;; PUT) echo put_subscription ;; *) echo method_not_allowed ;; esac ;;
     /v1/subscription/fetch)
       case "$_m" in POST) echo fetch_subscription ;; *) echo method_not_allowed ;; esac ;;
+    /v1/onboarding)
+      case "$_m" in GET) echo get_onboarding ;; PUT) echo put_onboarding ;; *) echo method_not_allowed ;; esac ;;
     /v1/update/check)
       case "$_m" in GET) echo get_update_check ;; *) echo method_not_allowed ;; esac ;;
     /v1/update/apply)

@@ -65,6 +65,12 @@ _opm_flush_device_conntrack() {
   done
 }
 
+# _opm_safe_name <raw> -> a Keenetic-safe known-host token: whitespace -> '-', drop
+# anything outside [A-Za-z0-9._-], collapse repeats, trim edges. "Android tv" -> "Android-tv".
+_opm_safe_name() {
+  printf '%s' "$1" | tr '[:space:]' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/-\{2,\}/-/g; s/^[-._]*//; s/[-._]*$//'
+}
+
 # post_device_vpn: POST /v1/devices/<mac>/vpn  body {enabled: bool}
 post_device_vpn() {
   _mac="$(printf '%s' "$PATH_INFO" | sed -n 's#^.*/devices/\([^/]*\)/vpn$#\1#p')"
@@ -73,12 +79,28 @@ post_device_vpn() {
   _pname="$(_opm_policy_name)"
   [ -n "$_pname" ] || { http_error 500 no_policy "xkeen policy not found"; return; }
   if [ "$_en" = "true" ]; then
-    _nm="$(ndmc -c 'show ip hotspot' 2>/dev/null | awk -v mac="$_mac" '
-      /^[[:space:]]*mac:[[:space:]]/{cur=$2}
-      cur==mac && /^[[:space:]]*hostname:[[:space:]]/{v=$0;sub(/^[[:space:]]*hostname:[[:space:]]*/,"",v);print v;exit}')"
-    _nm="$(printf '%s' "${_nm:-}" | tr -cd 'A-Za-z0-9._-')"
-    [ -n "$_nm" ] || _nm="dev$(printf '%s' "$_mac" | tr -cd '0-9A-Fa-f' | tail -c 6)"
-    ndmc -c "known host $_nm $_mac" >/dev/null 2>&1 || true
+    # Pull the host's existing identity once. Read the host-level name:/hostname:
+    # BEFORE the nested interface: block (which has its own name:), same as get_devices.
+    _fields="$(ndmc -c 'show ip hotspot' 2>/dev/null | awk -v want="$_mac" '
+      function trim(s){ sub(/^[[:space:]]+/,"",s); sub(/[[:space:]]+$/,"",s); return s }
+      function flush(){ if(m!="" && tolower(m)==tolower(want)){ printf "%s\t%s\t%s\n", hn, nm, rg } }
+      /^[[:space:]]*host:[[:space:]]*$/     { flush(); m="";hn="";nm="";rg=""; inhost=1 }
+      /^[[:space:]]*interface:/             { inhost=0 }
+      inhost && /^[[:space:]]*mac:[[:space:]]/       { m=trim($2) }
+      inhost && /^[[:space:]]*hostname:[[:space:]]/  { v=$0; sub(/^[[:space:]]*hostname:[[:space:]]*/,"",v); hn=trim(v) }
+      inhost && /^[[:space:]]*name:[[:space:]]/      { v=$0; sub(/^[[:space:]]*name:[[:space:]]*/,"",v); nm=trim(v) }
+      /^[[:space:]]*registered:[[:space:]]/ { rg=trim($2) }
+      END { flush() }' | head -n 1)"
+    _reg="$(printf '%s' "$_fields" | cut -f3)"
+    # Only (re)name when the host is NOT already registered — otherwise `known host`
+    # clobbers the friendly name Keenetic already shows (e.g. "Android tv" -> "dev3b8862").
+    if [ "$_reg" != "yes" ]; then
+      _hn="$(printf '%s' "$_fields" | cut -f1)"; _disp="$(printf '%s' "$_fields" | cut -f2)"
+      _nm="$(_opm_safe_name "$_disp")"                    # friendly name first (what the UI shows)
+      [ -n "$_nm" ] || _nm="$(_opm_safe_name "$_hn")"     # then the DHCP hostname
+      [ -n "$_nm" ] || _nm="dev$(printf '%s' "$_mac" | tr -cd '0-9A-Fa-f' | tail -c 6)"   # last resort
+      ndmc -c "known host $_nm $_mac" >/dev/null 2>&1 || true
+    fi
     ndmc -c "ip hotspot host $_mac policy $_pname" >/dev/null 2>&1
     ndmc -c "system configuration save" >/dev/null 2>&1 || true
     _opm_flush_device_conntrack "$_mac"
