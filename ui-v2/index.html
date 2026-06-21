@@ -611,12 +611,15 @@ async function loadRouting(){if(ROUTELOADING)return;ROUTELOADING=true;
   if(DEMO){ROUTING={mode:'rf-direct',rules:[{kind:'geosite',category:'youtube',action:'vpn'},{kind:'domain',value:'gosuslugi.ru',action:'direct'},{kind:'geosite',category:'private',action:'direct'},{kind:'geosite',category:'torrent',action:'direct'},{kind:'geoip',category:'private',action:'direct'}],defaultsSeeded:true};GEOGROUPS=[{kind:'site',category:'category-ru'},{kind:'ip',category:'direct'},{kind:'site',category:'youtube'},{kind:'site',category:'telegram'},{kind:'site',category:'category-ads'}];ROUTELOADING=false;render();return;}
   try{const r=await apij('/routing');if(r.ok&&r.body)ROUTING=r.body;const g=await apij('/geo/groups');if(g.ok&&g.body)GEOGROUPS=g.body;}catch(e){}
   if(!ROUTING)ROUTING={mode:'rf-direct',rules:[]};ROUTELOADING=false;render();}
-function chooseMode(m){if(ROUTING&&ROUTING.mode!==m){ROUTING.mode=m;ROUTEDIRTY=true;persistRouting();}go('#routing');}
+async function chooseMode(m){if(!ROUTING||ROUTING.mode===m){go('#routing');return;}
+  // A mode is a single deliberate switch -> apply immediately (regenerate + restart xray),
+  // unlike rule edits which batch behind "Apply changes". Persist first so the apply reads it.
+  ROUTING.mode=m;ROUTEDIRTY=true;ROUTEBUSY=true;go('#routing');await persistRouting();applyRouting();}
 function removeRule(i){ROUTING.rules.splice(i,1);ROUTEDIRTY=true;persistRouting();render();}
 function addSiteRule(){var el=$('#rinput');var n=normSite(el?el.value:'');if(!n){toast('Enter a domain or IP',true);return;}ROUTING.rules.push(Object.assign({},n,{action:RSHEET.bucket}));ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Added');}
 function addGroupRule(kind,cat){ROUTING.rules.push({kind:(kind==='ip'?'geoip':'geosite'),category:cat,action:RSHEET.bucket});ROUTEDIRTY=true;persistRouting();closeRsheet();toast('Group added');}
 async function persistRouting(){if(DEMO)return;try{await apij('/routing',{method:'PUT',body:JSON.stringify({mode:ROUTING.mode,rules:ROUTING.rules})});}catch(e){}}
-async function applyRouting(){if(DEMO){ROUTEDIRTY=false;toast('Applied (demo)');render();return;}ROUTEBUSY=true;render();var ok=false;try{const r=await apij('/routing/apply',{method:'POST'});ok=r.ok;}catch(e){}ROUTEBUSY=false;if(ok){ROUTEDIRTY=false;toast('Routing updated');}else{toast('Apply failed — rolled back',true);}render();}
+async function applyRouting(){if(DEMO){ROUTEDIRTY=false;ROUTEBUSY=false;toast('Applied (demo)');render();return;}ROUTEBUSY=true;render();var ok=false;try{const r=await apij('/routing/apply',{method:'POST'});ok=r.ok;}catch(e){}ROUTEBUSY=false;if(ok){ROUTEDIRTY=false;toast('Routing updated');}else{toast('Apply failed — rolled back',true);}render();}
 function openRsheet(b){RSHEET={bucket:b,tab:'site'};render();requestAnimationFrame(function(){var e=$('#rsheet');if(e)e.classList.add('open');});}
 function rtab(t){if(RSHEET)RSHEET.tab=t;render();var e=$('#rsheet');if(e)e.classList.add('open');}
 function closeRsheet(){var e=$('#rsheet');if(e)e.classList.remove('open');setTimeout(function(){RSHEET=null;render();},280);}
