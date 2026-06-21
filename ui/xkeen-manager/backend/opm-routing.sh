@@ -16,7 +16,41 @@ XCFG="${XRAY_CFG_DIR:-/opt/etc/xray/configs}"
 ASSET="${XRAY_GEO_DIR:-/opt/etc/xray/dat}"
 XRAY="${XRAY_BIN:-/opt/sbin/xray}"
 
-_seed() { [ -f "$ROUTING" ] || printf '{"mode":"rf-direct","rules":[]}\n' > "$ROUTING"; }
+# Default "always direct" rules — common local / bypass / P2P traffic that should skip the
+# VPN out of the box. Only categories that actually exist in the ACTIVE geo sources are
+# emitted, so a custom geo-file with different categories never yields a broken ext: ref.
+# These are ordinary, user-deletable rules; the defaultsSeeded flag stops deleted ones from
+# coming back.
+_default_rules() {
+  [ -f "$GEO" ] || { printf '[]'; return; }
+  "$JQ" -c '
+    . as $g
+    | ([$g.sources[]|select(.id==$g.activeGeosite)][0].categories // []) as $gs
+    | ([$g.sources[]|select(.id==$g.activeGeoip)][0].categories // []) as $gi
+    | ( (["whitelist","private","torrent"] | map(select(. as $c | $gs|index($c)) | {kind:"geosite",category:.,action:"direct"}))
+      + (["whitelist","private"]           | map(select(. as $c | $gi|index($c)) | {kind:"geoip",  category:.,action:"direct"})) )
+  ' "$GEO" 2>/dev/null
+}
+
+_seed() {
+  [ -f "$ROUTING" ] && return
+  _d="$(_default_rules)"; case "$_d" in '['*) : ;; *) _d='[]' ;; esac
+  "$JQ" -n --argjson d "$_d" '{mode:"rf-direct",rules:$d,defaultsSeeded:true}' > "$ROUTING"
+}
+
+# One-time migration: a routing.json created before defaults existed gets them injected
+# (deduped by kind+category), then the flag is set so the user's later deletions stick.
+_migrate_defaults() {
+  [ -f "$ROUTING" ] || return
+  "$JQ" -e '.defaultsSeeded==true' "$ROUTING" >/dev/null 2>&1 && return
+  _d="$(_default_rules)"; case "$_d" in '['*) : ;; *) _d='[]' ;; esac
+  _t="$(mktemp)"
+  "$JQ" --argjson d "$_d" '
+    (.rules // []) as $ex
+    | .rules = ($ex + [ $d[] | select(. as $n | ($ex|any(.kind==$n.kind and .category==$n.category))|not) ])
+    | .defaultsSeeded = true
+  ' "$ROUTING" > "$_t" 2>/dev/null && mv "$_t" "$ROUTING" || rm -f "$_t"
+}
 
 # gsfile|gifile|rudom|ruip  — from the active geo sources (empty fields if no geo.json)
 _geoargs() {
@@ -29,7 +63,7 @@ _geoargs() {
   ' "$GEO" 2>/dev/null
 }
 
-cmd_get() { _seed; cat "$ROUTING"; }
+cmd_get() { _seed; _migrate_defaults; cat "$ROUTING"; }
 
 cmd_set() {
   _b="$(cat)"
@@ -37,7 +71,9 @@ cmd_set() {
     || { printf '{"error":"invalid routing model"}\n'; return 1; }
   _m="$(printf '%s' "$_b" | "$JQ" -r .mode)"
   case "$_m" in rf-direct|selective|all-vpn|all-direct) : ;; *) printf '{"error":"bad mode"}\n'; return 1 ;; esac
-  printf '%s' "$_b" | "$JQ" -c '{mode:.mode, rules:(.rules // [])}' > "$ROUTING"
+  # Persist mode+rules, and keep defaultsSeeded sticky so the one-time default injection
+  # never re-runs (otherwise a user-deleted default would reappear on the next GET).
+  printf '%s' "$_b" | "$JQ" -c '{mode:.mode, rules:(.rules // []), defaultsSeeded:true}' > "$ROUTING"
   cat "$ROUTING"
 }
 

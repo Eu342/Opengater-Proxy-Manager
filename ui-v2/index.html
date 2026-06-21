@@ -602,7 +602,7 @@ function rsheet(){var s=RSHEET||{tab:'site'};var groups=GEOGROUPS||[];
     </div>
   </div>`;}
 async function loadRouting(){if(ROUTELOADING)return;ROUTELOADING=true;
-  if(DEMO){ROUTING={mode:'rf-direct',rules:[{kind:'geosite',category:'youtube',action:'vpn'},{kind:'domain',value:'gosuslugi.ru',action:'direct'}]};GEOGROUPS=[{kind:'site',category:'category-ru'},{kind:'ip',category:'direct'},{kind:'site',category:'youtube'},{kind:'site',category:'telegram'},{kind:'site',category:'category-ads'}];ROUTELOADING=false;render();return;}
+  if(DEMO){ROUTING={mode:'rf-direct',rules:[{kind:'geosite',category:'youtube',action:'vpn'},{kind:'domain',value:'gosuslugi.ru',action:'direct'},{kind:'geosite',category:'whitelist',action:'direct'},{kind:'geosite',category:'private',action:'direct'},{kind:'geosite',category:'torrent',action:'direct'},{kind:'geoip',category:'whitelist',action:'direct'},{kind:'geoip',category:'private',action:'direct'}],defaultsSeeded:true};GEOGROUPS=[{kind:'site',category:'category-ru'},{kind:'ip',category:'direct'},{kind:'site',category:'youtube'},{kind:'site',category:'telegram'},{kind:'site',category:'category-ads'}];ROUTELOADING=false;render();return;}
   try{const r=await apij('/routing');if(r.ok&&r.body)ROUTING=r.body;const g=await apij('/geo/groups');if(g.ok&&g.body)GEOGROUPS=g.body;}catch(e){}
   if(!ROUTING)ROUTING={mode:'rf-direct',rules:[]};ROUTELOADING=false;render();}
 function chooseMode(m){if(ROUTING&&ROUTING.mode!==m){ROUTING.mode=m;ROUTEDIRTY=true;persistRouting();}go('#routing');}

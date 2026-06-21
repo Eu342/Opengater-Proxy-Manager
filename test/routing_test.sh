@@ -32,4 +32,32 @@ assert_eq "all-vpn catch-all -> vless" "vless-reality" "$(printf '%s' "$av" | jq
 em="$(printf '{"mode":"rf-direct","rules":[]}' | gen /dev/stdin)"
 assert_eq "empty rf-direct rule count" "4" "$(printf '%s' "$em" | jq '.routing.rules|length')"
 
+# --- default "always direct" rules (opm-routing.sh seed/migrate) ---
+RSH="$DIR/../ui/xkeen-manager/backend/opm-routing.sh"
+W="$(mktemp -d)"; export OPM_ROOT="$W"
+cat > "$W/geo.json" <<'JSON'
+{"activeGeosite":"gs","activeGeoip":"gi","sources":[
+  {"id":"gs","kind":"geosite","categories":["category-ru","whitelist","private","torrent"]},
+  {"id":"gi","kind":"geoip","categories":["direct","whitelist","private"]}]}
+JSON
+# fresh seed: whitelist/private/torrent (geosite) + whitelist/private (geoip), all direct
+seed="$(sh "$RSH" get)"
+assert_eq "seed defaults count" "5" "$(printf '%s' "$seed" | jq '.rules|length')"
+assert_eq "seed all direct" "true" "$(printf '%s' "$seed" | jq '[.rules[].action]|all(.=="direct")')"
+assert_eq "seed flagged" "true" "$(printf '%s' "$seed" | jq '.defaultsSeeded')"
+# migrate an existing pre-defaults model: keep its rule, add defaults once
+rm -f "$W/routing.json"
+printf '{"mode":"rf-direct","rules":[{"kind":"domain","value":"2ip.ru","action":"vpn"}]}' > "$W/routing.json"
+mig="$(sh "$RSH" get)"
+assert_eq "migrate keeps user rule" "true" "$(printf '%s' "$mig" | jq '[.rules[]|select(.value=="2ip.ru")]|length==1')"
+assert_eq "migrate adds defaults" "6" "$(printf '%s' "$mig" | jq '.rules|length')"
+assert_eq "migrate idempotent" "6" "$(sh "$RSH" get | jq '.rules|length')"
+# a deleted default must NOT come back (flag preserved through set)
+sh "$RSH" get | jq 'del(.rules[]|select(.category=="torrent"))|{mode,rules}' | sh "$RSH" set >/dev/null
+assert_eq "deleted default stays gone" "false" "$(sh "$RSH" get | jq '[.rules[]|select(.category=="torrent")]|length>0')"
+# only-existing categories are emitted (geofile lacking a category -> no broken rule)
+rm -f "$W/routing.json"; printf '{"activeGeosite":"gs","activeGeoip":"gi","sources":[{"id":"gs","kind":"geosite","categories":["category-ru"]},{"id":"gi","kind":"geoip","categories":["direct"]}]}' > "$W/geo.json"
+assert_eq "no defaults when categories absent" "0" "$(sh "$RSH" get | jq '.rules|length')"
+unset OPM_ROOT; rm -rf "$W"
+
 test_summary
