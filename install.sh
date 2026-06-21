@@ -85,9 +85,12 @@ ensure_https_fetcher() {
 fetch_to() {
   ensure_https_fetcher
   url="$1"; dest="$2"
+  # curl's default connect-timeout is 300s, so an unreachable host hangs ~5min before
+  # failing (the sing-box-download symptom on throttled/blocked networks). Cap the connect
+  # phase and retry transient errors so callers can fail over to a mirror quickly.
   case "$FETCHER_TYPE" in
-    curl) "$FETCHER_BIN" -fsSL -o "$dest" "$url" ;;
-    wget) "$FETCHER_BIN" -q -O "$dest" "$url" ;;
+    curl) "$FETCHER_BIN" -fsSL --connect-timeout 25 --retry 2 --retry-delay 2 -o "$dest" "$url" ;;
+    wget) "$FETCHER_BIN" -q --timeout=25 --tries=2 -O "$dest" "$url" ;;
     *)    die "fetcher not resolved" ;;
   esac
 }
@@ -300,28 +303,42 @@ install_singbox() {
     *)             ARCH="$(uname -m)" ;;
   esac
 
-  URL="https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-${ARCH}.tar.gz"
+  REL="SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-${ARCH}.tar.gz"
+  # GitHub release assets are frequently throttled/blocked (e.g. for RU users) — that is the
+  # "Connection timed out" install failure. Try the original first, then GitHub proxy mirrors.
+  # Override entirely with OPM_SINGBOX_URL, or prepend extra sources via OPM_SINGBOX_MIRRORS.
+  URLS="${OPM_SINGBOX_URL:-}
+${OPM_SINGBOX_MIRRORS:-}
+https://github.com/${REL}
+https://ghproxy.net/https://github.com/${REL}
+https://gh-proxy.com/https://github.com/${REL}
+https://ghfast.top/https://github.com/${REL}"
   log "Downloading sing-box ${SING_BOX_VERSION} (${ARCH})"
 
+  installed=0
+  for u in $URLS; do
+    [ -n "$u" ] || continue
+    log "  source: $u"
+    rm -rf /tmp/opm-sing-box /tmp/opm-sing-box.tar.gz; mkdir -p /tmp/opm-sing-box
+    fetch_to "$u" /tmp/opm-sing-box.tar.gz || { log "    download failed, trying next"; continue; }
+    [ -s /tmp/opm-sing-box.tar.gz ] || { log "    empty response, trying next"; continue; }
+    if ! /opt/bin/tar -xzf /tmp/opm-sing-box.tar.gz -C /tmp/opm-sing-box 2>/dev/null; then
+      log "    not a valid tarball (mirror error page?), trying next"; continue
+    fi
+    SBIN="$(find /tmp/opm-sing-box -type f -name sing-box | head -n 1)"
+    if [ -n "$SBIN" ]; then
+      cp "$SBIN" /opt/sbin/sing-box && chmod 755 /opt/sbin/sing-box
+      log "Installed /opt/sbin/sing-box (from $u)"
+      installed=1; break
+    fi
+    log "    sing-box binary not in tarball, trying next"
+  done
+
   rm -rf /tmp/opm-sing-box /tmp/opm-sing-box.tar.gz
-  mkdir -p /tmp/opm-sing-box
-
-  if ! fetch_to "$URL" /tmp/opm-sing-box.tar.gz; then
-    log "WARN: failed to download sing-box. UDP-VPN groups will not work until you install /opt/sbin/sing-box manually."
-    return 0
+  if [ "$installed" != 1 ]; then
+    log "WARN: could not download sing-box from any mirror. UDP-VPN groups will not work until you"
+    log "      install /opt/sbin/sing-box manually, or re-run install with OPM_SINGBOX_URL=<reachable-url>."
   fi
-
-  /opt/bin/tar -xzf /tmp/opm-sing-box.tar.gz -C /tmp/opm-sing-box
-  SBIN="$(find /tmp/opm-sing-box -type f -name sing-box | head -n 1)"
-  if [ -n "$SBIN" ]; then
-    cp "$SBIN" /opt/sbin/sing-box
-    chmod 755 /opt/sbin/sing-box
-    log "Installed /opt/sbin/sing-box"
-  else
-    log "WARN: sing-box binary not found inside tarball"
-  fi
-
-  rm -rf /tmp/opm-sing-box /tmp/opm-sing-box.tar.gz
 }
 
 start_services() {
