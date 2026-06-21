@@ -387,12 +387,19 @@ xkeen_tproxy_ready() {
 # installed  <=>  settings.vpnEnabled == true. State is the source of truth.
 # ---------------------------------------------------------------------------
 
-# default enabled when the flag is absent. NOTE: jq's `//` treats `false` as
-# empty, so `.settings.vpnEnabled // true` would wrongly yield true when the flag
-# is false. Read the raw value and compare against "false".
+# The VPN is active only when the flag isn't false AND a subscription with a node
+# exists. Without a subscription the redirect must never be installed (it would route
+# policy devices to a dead proxy), so a fresh / no-subscription install stays direct even
+# though the flag defaults to enabled.
+# NOTE: jq's `//` treats `false` as empty, so `.settings.vpnEnabled // true` would wrongly
+# yield true when the flag is false. Read the raw value and compare against "false".
 xkeen_vpn_enabled() {
   _vsp="${STATE_PATH:-/opt/share/xkeen-manager/xkeen-ui-state.json}"
-  [ "$(jq -r '.settings.vpnEnabled' "$_vsp" 2>/dev/null)" != "false" ]
+  [ "$(jq -r '.settings.vpnEnabled' "$_vsp" 2>/dev/null)" = "false" ] && return 1
+  _sf="${OPM_SUB_FILE:-/opt/share/xkeen-manager/subscription.json}"
+  [ -f "$_sf" ] || return 1
+  _scnt="$(jq -r '(.locations|length)//0' "$_sf" 2>/dev/null)"
+  [ -n "$_scnt" ] && [ "$_scnt" -gt 0 ] 2>/dev/null
 }
 
 # Reverse of repair: remove the redirect so policy-marked traffic flows direct

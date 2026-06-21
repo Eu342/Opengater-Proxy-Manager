@@ -17,7 +17,11 @@ get_subscription() {
 put_subscription() {
   _sb="$(cat)"
   printf '%s' "$_sb" | jq -e . >/dev/null 2>&1 || { http_error 400 bad_request "invalid json body"; return; }
-  printf '%s\n' "$_sb" > "$_OPM_SUB_FILE" 2>/dev/null || { http_error 500 write_failed "cannot write subscription"; return; }
+  # atomic write: the runtime reads this file to decide whether the VPN may be enabled, so a
+  # half-written file must never be observable.
+  _tmp="$_OPM_SUB_FILE.tmp.$$"
+  printf '%s\n' "$_sb" > "$_tmp" 2>/dev/null && mv "$_tmp" "$_OPM_SUB_FILE" 2>/dev/null \
+    || { rm -f "$_tmp" 2>/dev/null; http_error 500 write_failed "cannot write subscription"; return; }
   http_ok '{"ok":true}'
 }
 

@@ -197,6 +197,7 @@ get_health() {
   _sb_run=$([ -n "$_sb_pid" ] && printf 'true' || printf 'false')
   _sh_run=$([ -n "$_sh_pid" ] && printf 'true' || printf 'false')
   _vpn_en="$(jq -r '.settings.vpnEnabled' "${XKEEN_STATE_PATH:-/opt/share/xkeen-manager/xkeen-ui-state.json}" 2>/dev/null)"; [ "$_vpn_en" = "false" ] || _vpn_en=true
+  _opm_has_subscription || _vpn_en=false   # no subscription -> VPN not enabled
 
   _payload="$(jq -n \
     --argjson vpn_enabled "$_vpn_en" \
@@ -614,10 +615,20 @@ put_loglevel() {
   http_ok "$(jq -n --arg l "$_lvl" '{ok:true,level:$l,restarted:true}')"
 }
 
+# _opm_has_subscription -> 0 when a subscription with >=1 location is stored (a node to
+# connect to). The VPN can't be enabled without one.
+_opm_has_subscription() {
+  _sf="${OPM_SUB_FILE:-/opt/share/xkeen-manager/subscription.json}"
+  [ -f "$_sf" ] || return 1
+  _n="$(jq -r '(.locations|length)//0' "$_sf" 2>/dev/null)"
+  [ -n "$_n" ] && [ "$_n" -gt 0 ] 2>/dev/null
+}
+
 # _vpn_status_json -> {ok,enabled,xrayRunning,redirectInstalled}
 _vpn_status_json() {
   _vsp="${XKEEN_STATE_PATH:-/opt/share/xkeen-manager/xkeen-ui-state.json}"
   _ven="$(jq -r '.settings.vpnEnabled' "$_vsp" 2>/dev/null)"; [ "$_ven" = "false" ] || _ven=true
+  _opm_has_subscription || _ven=false   # no subscription -> not (and can't be) enabled
   _vxr=false; pidof xray >/dev/null 2>&1 && _vxr=true
   _vrd=false; iptables -t nat -S xkeen 2>/dev/null | grep -q 'REDIRECT --to-ports' && _vrd=true
   jq -n --argjson e "$_ven" --argjson x "$_vxr" --argjson r "$_vrd" \
@@ -631,6 +642,9 @@ get_vpn() { http_ok "$(_vpn_status_json)"; }
 put_vpn() {
   _en="$(cat | jq -r '.enabled' 2>/dev/null)"
   case "$_en" in true|false) : ;; *) http_error 400 bad_request "enabled must be a boolean"; return ;; esac
+  if [ "$_en" = true ] && ! _opm_has_subscription; then
+    http_error 400 no_subscription "add a subscription before enabling the VPN"; return
+  fi
   command -v opm_vpn_set >/dev/null 2>&1 && opm_vpn_set "$_en"
   http_ok "$(_vpn_status_json)"
 }
