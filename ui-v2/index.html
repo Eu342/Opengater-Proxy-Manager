@@ -459,12 +459,18 @@ function viewDashboard(h,k){
   const xv=(k.versions||{}).xray||(VCACHE&&VCACHE.xray), sv=(k.versions||{}).singbox||(VCACHE&&VCACHE.singbox);
   const fade=(on,v)=>'<span class="'+(on?'fade':'')+'">'+v+'</span>';   // fade-in once per slot
   const fT=HL&&!SEEN.timer, fV=!!xv&&!SEEN.ver, fI=SL&&!SEEN.ip;
+  // pexit: show the flag+IP ONLY when there is a real exit IP (VPN up & settled). While
+  // connecting/disconnecting (pending) or up-but-waiting-for-IP -> spinner. Off -> dash, no flag.
+  const exip=(POWER&&!VPNPENDING)?((k.vpn||{}).exitIp||''):'';
+  const pexitHtml=(!SL||VPNPENDING||(POWER&&!exip))?spin
+    :(exip?fade(fI,'<span class="flagip">'+flagImg(loc.flag)+'<span class="exip">'+esc(exip)+'</span></span>')
+          :'<span class="exip">—</span>');
   const _v=shell('dashboard',`
     <div class="card power">
       <button class="pbtn ${VPNPENDING?'pending':(POWER?'on':'off')}" onclick="togglePower()" title="Connect / disconnect"><span class="cmt"></span><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 7.4a8 8 0 1 0 11.2 0"/></svg></button>
       <div><div class="pstate">${VPNPENDING?(VPNPENDING==='on'?'Connecting…':'Disconnecting…'):(POWER?'Connected':'Off')}</div><div class="ptimer tnum" id="up">${VPNPENDING?'—':(!HL?spin:fade(fT,POWER?fmtUp(upSec()):'—'))}</div></div>
       <span class="grow"></span>
-      <div class="pexit">${!SL?spin:fade(fI,'<span class="flagip">'+flagImg(loc.flag)+'<span class="exip">'+(POWER?esc((k.vpn||{}).exitIp||'—'):'—')+'</span></span>')}</div>
+      <div class="pexit">${pexitHtml}</div>
     </div>
     <h2>Subscriptions</h2>
     <div class="card conn ${CONNOPEN?'open':''}" id="conn">
@@ -488,7 +494,7 @@ function viewDashboard(h,k){
       <span class="svc"><span class="dot ${!HL?'wait':(!POWER?'wait':(sUp?'':'bad'))}"></span> sing‑box ${sv?fade(fV,esc(sv)):spin}</span>
       <span class="m tnum">fd ${fd.count||0} / ${fd.limit||0} · conntrack ${ct.max?Math.round(ct.count/ct.max*100):0}% · mem ${mem} MB</span>
     </div>`);
-  SEEN.timer=SEEN.timer||HL; SEEN.ver=SEEN.ver||!!xv; SEEN.ip=SEEN.ip||SL;
+  SEEN.timer=SEEN.timer||HL; SEEN.ver=SEEN.ver||!!xv; SEEN.ip=SEEN.ip||!!exip;
   return _v;
 }
 function pingBars(ms){var q=(typeof ms!=='number'||isNaN(ms))?0:(ms<80?4:ms<160?3:ms<300?2:1);var b='';for(var k=1;k<=4;k++){b+='<i'+(k<=q?' class="f"':'')+'></i>';}return '<span class="bars q'+q+'" title="'+(typeof ms==='number'&&!isNaN(ms)?ms+' ms':'no data')+'">'+b+'</span>';}
